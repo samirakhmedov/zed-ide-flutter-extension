@@ -1,38 +1,38 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Dart Debug Adapter Configuration",
+  "title": "Flutter Debug Adapter Configuration",
   "type": "object",
   "properties": {
     "adapter": {
       "type": "string",
       "enum": [
-        "Dart"
+        "Flutter"
       ]
     },
     "type": {
       "type": "string",
       "enum": [
-        "dart",
         "flutter"
       ],
-      "description": "Debug Flutter or Dart file"
+      "description": "Debug Flutter application",
+      "default": "flutter"
     },
     "label": {
       "type": "string",
       "description": "Human-readable name for this debug configuration",
       "examples": [
-        "Launch Dart App",
-        "Debug Main",
-        "Dart Console"
+        "Launch Flutter App",
+        "Debug Flutter",
+        "Flutter Development"
       ]
     },
     "program": {
       "type": "string",
-      "description": "Path to the Dart file to debug",
+      "description": "Path to the Flutter app entry point",
+      "default": "lib/main.dart",
       "examples": [
         "lib/main.dart",
-        "bin/main.dart",
-        "test/example_test.dart"
+        "lib/app.dart"
       ]
     },
     "cwd": {
@@ -41,11 +41,11 @@
     },
     "useFvm": {
       "type": "boolean",
-      "description": "Weather to use fvm to run the Dart/Flutter program"
+      "description": "Use FVM (Flutter Version Manager) to run the Flutter program"
     },
     "args": {
       "type": "array",
-      "description": "Arguments passed to the Dart program.",
+      "description": "Arguments passed to the Flutter program",
       "items": {
         "type": "string"
       },
@@ -53,18 +53,27 @@
     },
     "device_id": {
       "type": "string",
+      "description": "Target device ID (auto-selected if not specified)",
       "examples": [
         "chrome",
         "edge",
-        "<android-id>",
-        "<ios-id>"
+        "macos",
+        "windows",
+        "linux",
+        "<android-device-id>",
+        "<ios-device-id>"
       ]
     },
     "platform": {
       "type": "string",
-      "examples": [
+      "description": "Target platform (auto-detected from device if not specified)",
+      "enum": [
         "web",
-        "desktop"
+        "ios",
+        "android",
+        "macos",
+        "windows",
+        "linux"
       ]
     },
     "request": {
@@ -80,19 +89,45 @@
       "type": "string",
       "description": "The VM Service URI to attach to (for attach mode)"
     },
+    "flutterMode": {
+      "type": "string",
+      "enum": [
+        "debug",
+        "profile",
+        "release"
+      ],
+      "description": "Flutter build mode",
+      "default": "debug"
+    },
+    "flutterPlatform": {
+      "type": "string",
+      "description": "Target platform variant",
+      "examples": [
+        "android-arm",
+        "android-arm64",
+        "android-x86",
+        "ios",
+        "web"
+      ]
+    },
     "stopOnEntry": {
       "type": "boolean",
-      "description": "Pause debugger on entry.",
+      "description": "Pause debugger on entry",
       "default": false
     },
     "supportsHotReload": {
       "type": "boolean",
-      "description": "Enable hot reload support (for Flutter projects)",
-      "default": false
+      "description": "Enable hot reload support",
+      "default": true
     },
     "hotReloadOnSave": {
       "type": "boolean",
       "description": "Automatically trigger hot reload on file save",
+      "default": true
+    },
+    "hotRestartOnSave": {
+      "type": "boolean",
+      "description": "Automatically trigger hot restart on force-save (Cmd+Shift+S)",
       "default": false
     },
     "showMemoryUsage": {
@@ -109,6 +144,24 @@
       "type": "number",
       "description": "Port for VM service (0 for auto-assign)",
       "default": 0
+    },
+    "flutterTest": {
+      "type": "boolean",
+      "description": "Run in Flutter test mode",
+      "default": false
+    },
+    "additionalArgs": {
+      "type": "array",
+      "description": "Additional arguments to pass to flutter run",
+      "items": {
+        "type": "string"
+      },
+      "examples": [
+        "--flavor",
+        "development",
+        "--dart-define",
+        "ENV=dev"
+      ]
     }
   },
   "required": [

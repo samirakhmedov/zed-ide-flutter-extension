@@ -1,15 +1,16 @@
-id = "dart"
-name = "Dart"
-description = "Dart support."
-version = "0.3.5"
+id = "flutter"
+name = "Flutter"
+description = "Dart and Flutter support with hot reload, FVM integration, and comprehensive development tools."
+version = "1.0.0"
 schema_version = 1
 authors = [
+    "Samir Akhmedov <b.samir.akhmedov@gmail.com>"
     "Abdullah Alsigar <abdullah.alsigar@gmail.com>",
     "Flo <flo80@users.noreply.github.com>",
     "ybbond <hi@ybbond.id>",
     "nielsenko <kasper@byolimit.com>",
 ]
-repository = "https://github.com/zed-extensions/dart"
+repository = "https://github.com/samirakhmedov/zed-ide-flutter-extension"
 
 [language_servers.dart]
 name = "Dart LSP"
@@ -24,3 +25,27 @@ commit = "80e23c07b64494f7e21090bb3450223ef0b192f4"
 # Optional relative path to the JSON schema for the debug adapter configuration schema. Defaults to `debug_adapter_schemas/$DEBUG_ADAPTER_NAME_ID.json`.
 # Note that while this field is optional, a schema is mandatory.
 # schema_path = "relative/path/to/schema.json"
+
+[debug_adapters.Flutter]
+# Flutter-specific debug adapter schema
+# Uses debug_adapter_schemas/Flutter.json by default
+
+[slash_commands.flutter-devices]
+description = "List available Flutter devices"
+requires_argument = false
+
+[slash_commands.flutter-doctor]
+description = "Run Flutter doctor diagnostics"
+requires_argument = false
+
+[slash_commands.flutter-pub]
+description = "Run Flutter pub commands (get, upgrade, outdated)"
+requires_argument = true
+
+[slash_commands.flutter-analyze]
+description = "Run Flutter static analysis"
+requires_argument = false
+
+[slash_commands.flutter-test]
+description = "Run Flutter tests"
+requires_argument = false

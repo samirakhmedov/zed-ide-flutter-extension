@@ -1,44 +1,152 @@
 [
   {
-    "label": "flutter run",
+    "label": "Flutter: Run",
     "command": "flutter",
     "args": ["run"],
-    "tags": ["flutter-main"]
+    "tags": ["flutter-main", "debug"]
   },
   {
-    "label": "fvm flutter run",
-    "command": "fvm flutter",
-    "args": ["run"],
-    "tags": ["flutter-main"]
-  },
-  {
-    "label": "flutter test $ZED_STEM",
+    "label": "Flutter: Test File",
     "command": "flutter",
     "args": ["test", "$ZED_FILE"],
-    "tags": ["flutter-test-main"]
+    "tags": ["flutter-test-main", "test"]
   },
   {
-    "label": "fvm flutter test $ZED_STEM",
-    "command": "fvm flutter",
-    "args": ["test", "$ZED_FILE"],
-    "tags": ["flutter-test-main"]
+    "label": "Flutter: Test All",
+    "command": "flutter",
+    "args": ["test"],
+    "tags": ["test"]
   },
   {
-    "label": "dart test file $ZED_STEM",
+    "label": "Flutter: Pub Get",
+    "command": "flutter",
+    "args": ["pub", "get"],
+    "tags": ["package-management", "development"]
+  },
+  {
+    "label": "Flutter: Pub Upgrade",
+    "command": "flutter",
+    "args": ["pub", "upgrade"],
+    "tags": ["package-management", "development"]
+  },
+  {
+    "label": "Flutter: Pub Outdated",
+    "command": "flutter",
+    "args": ["pub", "outdated"],
+    "tags": ["package-management", "development"]
+  },
+  {
+    "label": "Flutter: Clean",
+    "command": "flutter",
+    "args": ["clean"],
+    "tags": ["project-management", "development"]
+  },
+  {
+    "label": "Flutter: Doctor",
+    "command": "flutter",
+    "args": ["doctor", "-v"],
+    "tags": ["diagnostic", "utility"]
+  },
+  {
+    "label": "Flutter: Analyze",
+    "command": "flutter",
+    "args": ["analyze"],
+    "tags": ["diagnostic", "development"]
+  },
+  {
+    "label": "Flutter: Build APK",
+    "command": "flutter",
+    "args": ["build", "apk"],
+    "tags": ["build"]
+  },
+  {
+    "label": "Flutter: Build iOS",
+    "command": "flutter",
+    "args": ["build", "ios"],
+    "tags": ["build"]
+  },
+  {
+    "label": "Flutter: Build Web",
+    "command": "flutter",
+    "args": ["build", "web"],
+    "tags": ["build"]
+  },
+  {
+    "label": "Flutter: Build macOS",
+    "command": "flutter",
+    "args": ["build", "macos"],
+    "tags": ["build"]
+  },
+  {
+    "label": "Flutter: Build Windows",
+    "command": "flutter",
+    "args": ["build", "windows"],
+    "tags": ["build"]
+  },
+  {
+    "label": "Flutter: Build Linux",
+    "command": "flutter",
+    "args": ["build", "linux"],
+    "tags": ["build"]
+  },
+  {
+    "label": "Flutter: Devices",
+    "command": "flutter",
+    "args": ["devices"],
+    "tags": ["device", "utility"]
+  },
+  {
+    "label": "Flutter: Emulators",
+    "command": "flutter",
+    "args": ["emulators"],
+    "tags": ["device", "utility"]
+  },
+  {
+    "label": "Flutter: Create Project",
+    "command": "flutter",
+    "args": ["create", "."],
+    "tags": ["project-management"]
+  },
+  {
+    "label": "Flutter: Upgrade",
+    "command": "flutter",
+    "args": ["upgrade"],
+    "tags": ["utility"]
+  },
+  {
+    "label": "Flutter: Format",
+    "command": "flutter",
+    "args": ["format", "."],
+    "tags": ["development"]
+  },
+  {
+    "label": "Dart: Test File",
     "command": "dart",
     "args": ["test", "$ZED_FILE"],
-    "tags": ["dart-test-file"]
+    "tags": ["dart-test-file", "test"]
   },
   {
-    "label": "dart test group $ZED_STEM",
+    "label": "Dart: Test Group",
     "command": "dart",
     "args": ["test", "\"$ZED_FILE?line=$ZED_ROW\""],
-    "tags": ["dart-test-group"]
+    "tags": ["dart-test-group", "test"]
   },
   {
-    "label": "dart test single $ZED_STEM",
+    "label": "Dart: Test Single",
     "command": "dart",
     "args": ["test", "\"$ZED_FILE?line=$ZED_ROW\""],
-    "tags": ["dart-test-single"]
+    "tags": ["dart-test-single", "test"]
+  },
+  {
+    "label": "Dart: Analyze",
+    "command": "dart",
+    "args": ["analyze"],
+    "tags": ["diagnostic", "development"]
+  },
+  {
+    "label": "Dart: Format",
+    "command": "dart",
+    "args": ["format", "."],
+    "tags": ["development"]
   }
 ]
