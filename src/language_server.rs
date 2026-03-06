@@ -5,75 +5,53 @@ use zed_extension_api::{
     self as zed, serde_json, CodeLabel, CodeLabelSpan, LanguageServerId, Result, Worktree,
 };
 
-pub struct DartBinary {
-    pub path: String,
-    pub args: Option<Vec<String>>,
-}
-
-pub fn language_server_binary(
-    _language_server_id: &LanguageServerId,
-    worktree: &Worktree,
-) -> Result<DartBinary> {
-    let binary_settings = LspSettings::for_worktree("dart", worktree)
-        .ok()
-        .and_then(|lsp_settings| lsp_settings.binary);
-    let binary_args = binary_settings
-        .as_ref()
-        .and_then(|binary_settings| binary_settings.arguments.clone());
-
-    if let Some(path) = binary_settings.and_then(|binary_settings| binary_settings.path) {
-        return Ok(DartBinary {
-            path,
-            args: binary_args,
-        });
-    }
-
-    if let Some(path) = worktree.which("dart") {
-        return Ok(DartBinary {
-            path,
-            args: binary_args,
-        });
-    }
-
-    Err(
-        "dart must be installed from dart.dev/get-dart or pointed to by the LSP binary settings"
-            .to_string(),
-    )
-}
-
 pub fn language_server_command(
-    language_server_id: &LanguageServerId,
+    _language_server_id: &LanguageServerId,
     worktree: &Worktree,
     #[allow(unused_variables)] fvm_status: &mut HashMap<String, bool>,
 ) -> Result<zed::Command> {
-    let dart_binary = language_server_binary(language_server_id, worktree)?;
+    let default_args = vec!["language-server".to_string(), "--protocol=lsp".to_string()];
 
     let (command, args) = {
         #[cfg(feature = "fvm-support")]
         {
-            if crate::fvm::is_fvm_project(worktree, fvm_status) {
+            let is_fvm = crate::fvm::is_fvm_project(worktree, fvm_status);
+
+            if is_fvm {
+                if worktree.which("fvm").is_none() {
+                    return Err(
+                        "FVM project detected (.fvm/fvm_config.json found) but 'fvm' command not found in PATH.\n\
+                         Install FVM: dart pub global activate fvm\n\
+                         Then restart Zed."
+                            .to_string(),
+                    );
+                }
+
                 let mut fvm_args = vec!["dart".to_string()];
-                fvm_args.extend(dart_binary.args.unwrap_or_else(|| {
-                    vec!["language-server".to_string(), "--protocol=lsp".to_string()]
-                }));
+                fvm_args.extend(default_args.clone());
                 ("fvm".to_string(), fvm_args)
+            } else if let Some(path) = worktree.which("dart") {
+                (path, default_args)
             } else {
-                (
-                    dart_binary.path,
-                    dart_binary.args.unwrap_or_else(|| {
-                        vec!["language-server".to_string(), "--protocol=lsp".to_string()]
-                    }),
-                )
+                return Err("Dart SDK not found in PATH.\n\
+                     \n\
+                     Options:\n\
+                     1. Install Dart from dart.dev/get-dart\n\
+                     2. Or configure FVM in your project: fvm use stable\n\
+                     3. Or set LSP binary path in Zed settings"
+                    .to_string());
             }
         }
         #[cfg(not(feature = "fvm-support"))]
         {
-            (
-                dart_binary.path,
-                dart_binary.args.unwrap_or_else(|| {
-                    vec!["language-server".to_string(), "--protocol=lsp".to_string()]
-                }),
-            )
+            if let Some(path) = worktree.which("dart") {
+                (path, default_args)
+            } else {
+                return Err("Dart SDK not found in PATH.\n\
+                     \n\
+                     Install Dart from dart.dev/get-dart or set LSP binary path in Zed settings"
+                    .to_string());
+            }
         }
     };
 
