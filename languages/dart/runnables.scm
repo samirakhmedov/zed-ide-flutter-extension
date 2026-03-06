@@ -44,6 +44,51 @@
     )
 )
 
+; Flutter widget test (testWidgets)
+(
+    (
+        (import_or_export
+            (library_import
+                (import_specification
+                    ("import"
+                        (configurable_uri
+                            (uri
+                                (string_literal) @_import
+                                (#match? @_import "package:flutter_test/flutter_test.dart")
+        ))))))
+        (
+            (function_body
+                (block
+                    (expression_statement
+                        (
+                            (identifier) @run (#eq? @run "testWidgets")
+        )))))
+        (#set! tag flutter-widget-test)
+    )
+)
+
+; Flutter integration test
+(
+    (
+        (import_or_export
+            (library_import
+                (import_specification
+                    ("import"
+                        (configurable_uri
+                            (uri
+                                (string_literal) @_import
+                                (#match? @_import "package:integration_test/integration_test.dart")
+        ))))))
+        (
+            (function_signature
+                name: (_) @run
+            )
+            (#eq? @run "main")
+        )
+        (#set! tag flutter-integration-test)
+    )
+)
+
 ; Dart test file
 (
     (
@@ -116,6 +161,29 @@
                                                         (
                                                             (identifier) @run (#eq? @run "test")
         )))))))))))))
+        (#set! tag dart-test-single)
+    )
+)
+
+; Dart test single (top-level)
+(
+    (
+        (import_or_export
+            (library_import
+                (import_specification
+                    ("import"
+                        (configurable_uri
+                            (uri
+                                (string_literal) @_import
+                                (#match? @_import "package:test/test.dart")
+        ))))))
+        (
+            (function_body
+                (block
+                    (expression_statement
+                        (
+                            (identifier) @run (#eq? @run "test")
+        )))))
         (#set! tag dart-test-single)
     )
 )

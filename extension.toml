@@ -4,7 +4,7 @@ description = "Dart and Flutter support with hot reload, FVM integration, and co
 version = "1.0.0"
 schema_version = 1
 authors = [
-    "Samir Akhmedov <b.samir.akhmedov@gmail.com>"
+    "Samir Akhmedov <b.samir.akhmedov@gmail.com>",
     "Abdullah Alsigar <abdullah.alsigar@gmail.com>",
     "Flo <flo80@users.noreply.github.com>",
     "ybbond <hi@ybbond.id>",

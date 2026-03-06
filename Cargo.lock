@@ -751,13 +751,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zed_dart"
-version = "0.4.0"
-dependencies = [
- "zed_extension_api",
-]
-
-[[package]]
 name = "zed_extension_api"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -766,6 +759,13 @@ dependencies = [
  "serde",
  "serde_json",
  "wit-bindgen",
+]
+
+[[package]]
+name = "zed_flutter"
+version = "1.0.0"
+dependencies = [
+ "zed_extension_api",
 ]
 
 [[package]]

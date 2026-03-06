@@ -52,14 +52,30 @@ impl DartExtension {
 
     /// Checks if the project uses FVM (Flutter Version Manager)
     /// by looking for .fvm/fvm_config.json
-    fn is_fvm_project(&self, worktree: &Worktree) -> bool {
-        worktree.read_text_file(".fvm/fvm_config.json").is_ok()
+    /// Uses caching to avoid repeated file system checks
+    fn is_fvm_project(&mut self, worktree: &Worktree) -> bool {
+        let worktree_id = worktree.root_path();
+
+        if let Some(&is_fvm) = self.fvm_status.get(&worktree_id) {
+            return is_fvm;
+        }
+
+        let is_fvm = worktree.read_text_file(".fvm/fvm_config.json").is_ok();
+        self.fvm_status.insert(worktree_id, is_fvm);
+        is_fvm
+    }
+
+    /// Invalidates FVM cache for a specific worktree
+    /// Should be called when .fvm/ directory changes
+    fn invalidate_fvm_cache(&mut self, worktree: &Worktree) {
+        let worktree_id = worktree.root_path();
+        self.fvm_status.remove(&worktree_id);
     }
 
     /// Returns the appropriate Flutter command based on FVM detection
     /// - "fvm flutter" for FVM projects
     /// - "flutter" for standard projects
-    fn get_flutter_command(&self, worktree: &Worktree) -> String {
+    fn get_flutter_command(&mut self, worktree: &Worktree) -> String {
         if self.is_fvm_project(worktree) {
             "fvm flutter".to_string()
         } else {
@@ -70,7 +86,7 @@ impl DartExtension {
     /// Returns the appropriate Dart command based on FVM detection
     /// - "fvm dart" for FVM projects
     /// - "dart" for standard projects
-    fn get_dart_command(&self, worktree: &Worktree) -> String {
+    fn get_dart_command(&mut self, worktree: &Worktree) -> String {
         if self.is_fvm_project(worktree) {
             "fvm dart".to_string()
         } else {
@@ -173,6 +189,54 @@ impl DartExtension {
                 }
             })
             .unwrap_or_else(|| "web".to_string()))
+    }
+
+    /// Extracts device ID from task arguments (e.g., -d chrome, --device-id=chrome)
+    fn extract_device_id(&self, task: &zed::TaskTemplate) -> Option<String> {
+        let args = &task.args;
+
+        for i in 0..args.len() {
+            if args[i] == "-d" || args[i] == "--device-id" {
+                return args.get(i + 1).cloned();
+            }
+
+            if args[i].starts_with("--device-id=") {
+                return args[i].strip_prefix("--device-id=").map(|s| s.to_string());
+            }
+        }
+
+        None
+    }
+
+    /// Extracts custom arguments (flavors, modes, etc.) from task
+    fn extract_custom_args(&self, task: &zed::TaskTemplate) -> Vec<String> {
+        let args = &task.args;
+        let mut custom_args = Vec::new();
+
+        let mut skip_next = false;
+        for arg in args.iter() {
+            if skip_next {
+                skip_next = false;
+                continue;
+            }
+
+            if arg == "flutter" || arg == "run" {
+                continue;
+            }
+
+            if arg == "-d" || arg == "--device-id" || arg.starts_with("--device-id=") {
+                if !arg.starts_with("--device-id=") {
+                    skip_next = true;
+                }
+                continue;
+            }
+
+            if arg.starts_with("--") {
+                custom_args.push(arg.clone());
+            }
+        }
+
+        custom_args
     }
 
     fn language_server_binary(
@@ -307,9 +371,12 @@ impl zed::Extension for DartExtension {
         let device_id = if debug_mode == "flutter" {
             if let Some(id) = user_config.get("device_id").and_then(|v| v.as_str()) {
                 self.ensure_device_available(id, worktree)?;
+                self.last_selected_device = Some(id.to_string());
                 id.to_string()
             } else {
-                self.select_best_device(worktree)?
+                let selected = self.select_best_device(worktree)?;
+                self.last_selected_device = Some(selected.clone());
+                selected
             }
         } else {
             user_config
@@ -416,6 +483,58 @@ impl zed::Extension for DartExtension {
                 Err("Missing required `request` field in Dart debug adapter configuration".into())
             }
         }
+    }
+
+    /// Converts a high-level debug configuration into a debug scenario
+    ///
+    /// This handles modal-based debugging where users can configure debug scenarios
+    /// through a UI. Translates generic configurations into Flutter/Dart-specific ones.
+    fn dap_config_to_scenario(
+        &mut self,
+        config: zed::DebugConfig,
+    ) -> Result<zed::DebugScenario, String> {
+        let request_config = match config.request {
+            zed::DebugRequest::Launch(launch) => {
+                json!({
+                    "type": config.adapter,
+                    "request": "launch",
+                    "program": launch.program,
+                    "cwd": launch.cwd,
+                    "args": launch.args,
+                })
+            }
+            zed::DebugRequest::Attach(attach) => {
+                json!({
+                    "type": config.adapter,
+                    "request": "attach",
+                    "processId": attach.process_id,
+                })
+            }
+        };
+
+        let mut config_json: serde_json::Value = request_config;
+
+        if let Some(stop_on_entry) = config.stop_on_entry {
+            config_json["stopOnEntry"] = json!(stop_on_entry);
+        }
+
+        if config.adapter == "Flutter" {
+            let device_id = self
+                .last_selected_device
+                .clone()
+                .unwrap_or_else(|| "chrome".to_string());
+            config_json["deviceId"] = json!(device_id);
+            config_json["supportsHotReload"] = json!(true);
+            config_json["hotReloadOnSave"] = json!(true);
+        }
+
+        Ok(zed::DebugScenario {
+            label: config.label,
+            adapter: config.adapter,
+            build: None,
+            config: config_json.to_string(),
+            tcp_connection: None,
+        })
     }
 
     fn language_server_command(
@@ -540,6 +659,107 @@ impl zed::Extension for DartExtension {
         }
     }
 
+    /// Creates debug scenarios from Flutter/Dart tasks
+    ///
+    /// This locator handles:
+    /// - `flutter run` tasks → Creates debug scenario with auto-device selection
+    /// - `flutter test` tasks → Creates debug scenario for testing
+    fn dap_locator_create_scenario(
+        &mut self,
+        _locator_name: String,
+        build_task: zed::TaskTemplate,
+        _resolved_label: String,
+        _debug_adapter_name: String,
+    ) -> Option<zed::DebugScenario> {
+        if build_task.command == "flutter" || build_task.command == "fvm" {
+            let args = &build_task.args;
+
+            if args.contains(&"run".to_string()) {
+                let device_id = self.extract_device_id(&build_task).unwrap_or_else(|| {
+                    self.last_selected_device
+                        .clone()
+                        .unwrap_or_else(|| "chrome".to_string())
+                });
+
+                let custom_args = self.extract_custom_args(&build_task);
+
+                let mut config = json!({
+                    "type": "flutter",
+                    "request": "launch",
+                    "deviceId": device_id,
+                    "program": "lib/main.dart"
+                });
+
+                if !custom_args.is_empty() {
+                    config["args"] = json!(custom_args);
+                }
+
+                return Some(zed::DebugScenario {
+                    label: build_task.label,
+                    adapter: "Flutter".to_string(),
+                    build: None,
+                    config: config.to_string(),
+                    tcp_connection: None,
+                });
+            }
+
+            if args.contains(&"test".to_string()) {
+                let test_file = args
+                    .iter()
+                    .skip_while(|arg| *arg != &"test".to_string())
+                    .skip(1)
+                    .next()
+                    .unwrap_or(&"test".to_string())
+                    .clone();
+
+                let config = json!({
+                    "type": "dart",
+                    "request": "launch",
+                    "program": test_file
+                });
+
+                return Some(zed::DebugScenario {
+                    label: build_task.label,
+                    adapter: "Dart".to_string(),
+                    build: None,
+                    config: config.to_string(),
+                    tcp_connection: None,
+                });
+            }
+        }
+
+        None
+    }
+
+    /// Runs the debug locator after build task completion
+    fn run_dap_locator(
+        &mut self,
+        _locator_name: String,
+        build_task: zed::TaskTemplate,
+    ) -> Result<zed::DebugRequest, String> {
+        if build_task.command == "flutter" || build_task.command == "fvm" {
+            let args = &build_task.args;
+
+            if args.contains(&"run".to_string()) {
+                let device_id = self
+                    .last_selected_device
+                    .clone()
+                    .unwrap_or_else(|| "chrome".to_string());
+                let mut run_args = vec!["run".to_string(), "-d".to_string(), device_id];
+                run_args.extend(args.iter().skip(1).filter(|a| *a != "run").cloned());
+
+                return Ok(zed::DebugRequest::Launch(zed::LaunchRequest {
+                    program: build_task.command.clone(),
+                    cwd: build_task.cwd,
+                    args: run_args,
+                    envs: build_task.env,
+                }));
+            }
+        }
+
+        Err("No debug configuration available for this task".to_string())
+    }
+
     /// Handles slash commands for AI assistant integration
     ///
     /// Supported commands:
@@ -618,6 +838,59 @@ impl zed::Extension for DartExtension {
                 sections: vec![],
             }),
             _ => Err(format!("Unknown slash command: {}", command.name)),
+        }
+    }
+
+    /// Provides tab completion for slash command arguments
+    fn complete_slash_command_argument(
+        &self,
+        command: zed::SlashCommand,
+        args: Vec<String>,
+    ) -> Result<Vec<zed::SlashCommandArgumentCompletion>, String> {
+        match command.name.as_str() {
+            "/flutter-pub" => {
+                let subcommands = vec![
+                    ("get", "get", false),
+                    ("upgrade", "upgrade", false),
+                    ("outdated", "outdated", false),
+                    ("cache", "cache", false),
+                    ("deps", "deps", false),
+                    ("downgrade", "downgrade", false),
+                    ("global", "global", false),
+                    ("locker", "locker", false),
+                    ("publish", "publish", false),
+                    ("unpack", "unpack", false),
+                ];
+
+                let completions: Vec<zed::SlashCommandArgumentCompletion> = if args.is_empty() {
+                    subcommands
+                        .iter()
+                        .map(
+                            |(label, new_text, run)| zed::SlashCommandArgumentCompletion {
+                                label: label.to_string(),
+                                new_text: new_text.to_string(),
+                                run_command: *run,
+                            },
+                        )
+                        .collect()
+                } else {
+                    let prefix = &args[0];
+                    subcommands
+                        .iter()
+                        .filter(|(label, _, _)| label.starts_with(prefix))
+                        .map(
+                            |(label, new_text, run)| zed::SlashCommandArgumentCompletion {
+                                label: label.to_string(),
+                                new_text: new_text.to_string(),
+                                run_command: *run,
+                            },
+                        )
+                        .collect()
+                };
+
+                Ok(completions)
+            }
+            _ => Ok(vec![]),
         }
     }
 }
