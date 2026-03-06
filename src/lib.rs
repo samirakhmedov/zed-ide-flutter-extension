@@ -31,8 +31,6 @@ struct DeviceInfo {
 struct DartExtension {
     /// Cached list of available devices (refreshed every 5 minutes)
     device_cache: Vec<DeviceInfo>,
-    /// Timestamp of last device cache refresh (Unix epoch seconds)
-    device_cache_timestamp: Option<u64>,
     /// Last selected device ID for smart defaults
     last_selected_device: Option<String>,
     /// FVM status cache per worktree (worktree_id -> is_fvm_project)
@@ -40,16 +38,6 @@ struct DartExtension {
 }
 
 impl DartExtension {
-    /// Creates a new extension instance with default state
-    fn new() -> Self {
-        Self {
-            device_cache: Vec::new(),
-            device_cache_timestamp: None,
-            last_selected_device: None,
-            fvm_status: HashMap::new(),
-        }
-    }
-
     /// Checks if the project uses FVM (Flutter Version Manager)
     /// by looking for .fvm/fvm_config.json
     /// Uses caching to avoid repeated file system checks
@@ -63,47 +51,6 @@ impl DartExtension {
         let is_fvm = worktree.read_text_file(".fvm/fvm_config.json").is_ok();
         self.fvm_status.insert(worktree_id, is_fvm);
         is_fvm
-    }
-
-    /// Invalidates FVM cache for a specific worktree
-    /// Should be called when .fvm/ directory changes
-    fn invalidate_fvm_cache(&mut self, worktree: &Worktree) {
-        let worktree_id = worktree.root_path();
-        self.fvm_status.remove(&worktree_id);
-    }
-
-    /// Returns the appropriate Flutter command based on FVM detection
-    /// - "fvm flutter" for FVM projects
-    /// - "flutter" for standard projects
-    fn get_flutter_command(&mut self, worktree: &Worktree) -> String {
-        if self.is_fvm_project(worktree) {
-            "fvm flutter".to_string()
-        } else {
-            "flutter".to_string()
-        }
-    }
-
-    /// Returns the appropriate Dart command based on FVM detection
-    /// - "fvm dart" for FVM projects
-    /// - "dart" for standard projects
-    fn get_dart_command(&mut self, worktree: &Worktree) -> String {
-        if self.is_fvm_project(worktree) {
-            "fvm dart".to_string()
-        } else {
-            "dart".to_string()
-        }
-    }
-
-    /// Lists all available Flutter devices (placeholder - API limitations)
-    /// TODO: Implement when shell_command API is available
-    fn list_devices(&mut self, _worktree: &Worktree) -> Result<Vec<DeviceInfo>, String> {
-        Ok(Vec::new())
-    }
-
-    /// Parses device list from `flutter devices --machine` output
-    /// TODO: Implement when shell_command API is available
-    fn parse_device_output(&self, _output: &str) -> Result<Vec<DeviceInfo>, String> {
-        Ok(Vec::new())
     }
 
     /// Returns cached devices or empty list (simplified for API constraints)
@@ -276,7 +223,6 @@ impl zed::Extension for DartExtension {
     fn new() -> Self {
         Self {
             device_cache: Vec::new(),
-            device_cache_timestamp: None,
             last_selected_device: None,
             fvm_status: HashMap::new(),
         }
