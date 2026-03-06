@@ -9,5 +9,12 @@ license = "Apache-2.0"
 path = "src/lib.rs"
 crate-type = ["cdylib"]
 
+[features]
+default = ["debug-adapter", "language-server", "slash-commands", "fvm-support"]
+debug-adapter = []
+language-server = []
+slash-commands = []
+fvm-support = []
+
 [dependencies]
 zed_extension_api = "0.7.0"
