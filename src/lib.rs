@@ -1,10 +1,6 @@
-#[cfg(any(feature = "fvm-support", feature = "language-server"))]
-use std::collections::HashMap;
-
 #[cfg(feature = "debug-adapter")]
 mod debug_adapter;
-#[cfg(feature = "fvm-support")]
-mod fvm;
+
 #[cfg(feature = "language-server")]
 mod language_server;
 #[cfg(feature = "slash-commands")]
@@ -27,8 +23,6 @@ use zed_extension_api::{
 struct DartExtension {
     device_cache: Vec<DeviceInfo>,
     last_selected_device: Option<String>,
-    #[cfg(feature = "fvm-support")]
-    fvm_status: HashMap<String, bool>,
 }
 
 impl zed_extension_api::Extension for DartExtension {
@@ -36,8 +30,6 @@ impl zed_extension_api::Extension for DartExtension {
         Self {
             device_cache: Vec::new(),
             last_selected_device: None,
-            #[cfg(feature = "fvm-support")]
-            fvm_status: HashMap::new(),
         }
     }
 
@@ -80,23 +72,7 @@ impl zed_extension_api::Extension for DartExtension {
         language_server_id: &LanguageServerId,
         worktree: &zed_extension_api::Worktree,
     ) -> zed_extension_api::Result<zed_extension_api::Command> {
-        #[cfg(feature = "fvm-support")]
-        {
-            language_server::language_server_command(
-                language_server_id,
-                worktree,
-                &mut self.fvm_status,
-            )
-        }
-        #[cfg(not(feature = "fvm-support"))]
-        {
-            let mut empty_fvm_status = HashMap::new();
-            language_server::language_server_command(
-                language_server_id,
-                worktree,
-                &mut empty_fvm_status,
-            )
-        }
+        language_server::language_server_command(language_server_id, worktree)
     }
 
     #[cfg(feature = "language-server")]

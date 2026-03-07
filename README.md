@@ -2,6 +2,29 @@
 
 A [Dart](https://dart.dev/) extension for [Zed](https://zed.dev) with comprehensive Flutter development support.
 
+## ⚡ Quick Setup
+
+### Using FVM? (Recommended)
+
+Create `.zed/settings.json` in your project root:
+
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "language-server"]
+      }
+    }
+  }
+}
+```
+
+Then restart Zed. Done! ✅
+
+**See [Setup Guide](./docs/SETUP.md) for detailed instructions.**
+
 ## Features
 
 ### Core Dart Support

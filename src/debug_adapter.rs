@@ -36,16 +36,7 @@ impl DartExtension {
         let use_fvm = user_config
             .get("useFvm")
             .and_then(|v| v.as_bool())
-            .unwrap_or_else(|| {
-                #[cfg(feature = "fvm-support")]
-                {
-                    crate::fvm::is_fvm_project(worktree, &mut self.fvm_status)
-                }
-                #[cfg(not(feature = "fvm-support"))]
-                {
-                    false
-                }
-            });
+            .unwrap_or(false);
 
         let debug_mode = user_config
             .get("type")
@@ -68,7 +59,10 @@ impl DartExtension {
 
         let (command, arguments) = if use_fvm {
             if worktree.which("fvm").is_none() {
-                return Err("FVM is configured but 'fvm' command not found. Install FVM: dart pub global activate fvm".to_string());
+                return Err("'useFvm' is set but 'fvm' command not found in PATH.\n\n\
+                     Install FVM: dart pub global activate fvm\n\
+                     Or create .zed/settings.json with manual binary configuration."
+                    .to_string());
             }
             (
                 "fvm".to_string(),
@@ -77,16 +71,46 @@ impl DartExtension {
         } else {
             let tool_path = worktree.which(tool);
             if tool_path.is_none() {
-                if debug_mode == "flutter" {
-                    return Err(
-                        "Flutter SDK not found. Install from flutter.dev or add to PATH"
-                            .to_string(),
-                    );
+                let tool_name = if debug_mode == "flutter" {
+                    "Flutter"
                 } else {
-                    return Err(
-                        "Dart SDK not found. Install from dart.dev or add to PATH".to_string()
-                    );
-                }
+                    "Dart"
+                };
+                let tool_lower = if debug_mode == "flutter" {
+                    "flutter"
+                } else {
+                    "dart"
+                };
+                let tool_site = if debug_mode == "flutter" {
+                    "flutter.dev"
+                } else {
+                    "dart.dev"
+                };
+
+                return Err(format!(
+                    "{} SDK not found.\n\n\
+                     ═════════════════════════════════════════════════\n\
+                     For FVM projects:\n\
+                     ═════════════════════════════════════════════════\n\
+                     Create .zed/settings.json in your project:\n\
+                     {{\n\
+                       \"debug\": {{\n\
+                         \"{}\": {{\n\
+                           \"binary\": {{\n\
+                             \"path\": \"fvm\",\n\
+                             \"arguments\": [\"{}\", \"debug_adapter\"]\n\
+                           }}\n\
+                         }}\n\
+                       }}\n\
+                     }}\n\
+                     \n\
+                     ═════════════════════════════════════════════════\n\
+                     For system {}:\n\
+                     ═════════════════════════════════════════════════\n\
+                     • Install from {}\n\
+                     • Ensure '{}' is in your PATH",
+                    tool_name, debug_mode, tool_lower, tool_name, tool_site, tool_lower
+                ));
             }
             (tool.to_string(), vec!["debug_adapter".to_string()])
         };

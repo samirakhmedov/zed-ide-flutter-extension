@@ -8,7 +8,7 @@ Essential information for agentic coding agents working in this repository.
 - Dart LSP integration
 - Debug adapter for Dart/Flutter
 - Flutter device management & hot reload
-- FVM (Flutter Version Manager) support
+- Manual SDK configuration (FVM or custom paths)
 - AI assistant slash commands
 
 **Repository**: https://github.com/samirakhmedov/zed-ide-flutter-extension
@@ -46,7 +46,7 @@ cargo test -- --nocapture
 Build with different feature combinations:
 
 ```bash
-# Default build (all features: debug-adapter, language-server, slash-commands, fvm-support)
+# Default build (all features: debug-adapter, language-server, slash-commands)
 cargo build --release
 
 # Minimal build (LSP only)
@@ -63,7 +63,8 @@ Available features:
 - `debug-adapter`: Debug adapter protocol implementation
 - `language-server`: LSP integration
 - `slash-commands`: AI assistant commands (`/flutter-*`)
-- `fvm-support`: Flutter Version Manager integration
+
+Note: `fvm-support` feature has been removed. FVM is now supported via manual configuration.
 
 ## Project Structure
 
@@ -75,9 +76,10 @@ src/
 ├── debug_adapter.rs        (356 lines) - DAP implementation (get_dap_binary, scenarios)
 ├── language_server.rs      (176 lines) - LSP binary setup, workspace config, completions
 ├── device.rs               (144 lines) - Device selection, caching, platform detection
-├── slash_commands.rs       (128 lines) - `/flutter-*` command handlers
-└── fvm.rs                  ( 14 lines) - FVM project detection
+└── slash_commands.rs       (128 lines) - `/flutter-*` command handlers
 ```
+
+Note: `src/fvm.rs` has been removed. FVM detection replaced with manual configuration.
 
 Other key files:
 - `extension.toml`: Extension metadata and configuration
@@ -198,9 +200,11 @@ Use `HashMap` for caching frequently accessed data:
 ```rust
 struct DartExtension {
     device_cache: Vec<DeviceInfo>,
-    fvm_status: HashMap<String, bool>,
+    last_selected_device: Option<String>,
 }
 ```
+
+Note: `fvm_status` cache has been removed.
 
 ### JSON Handling
 
@@ -224,20 +228,23 @@ let config: serde_json::Value = serde_json::from_str(&config.config)
 ```
 lib.rs
   ├── device.rs (standalone, no dependencies)
-  ├── fvm.rs (standalone, no dependencies)
-  ├── debug_adapter.rs → uses device, fvm
-  ├── language_server.rs → uses fvm
+  ├── debug_adapter.rs → uses device
+  ├── language_server.rs (standalone)
   └── slash_commands.rs → uses device
 ```
+
+Note: `fvm.rs` module has been removed.
 
 ## Extension-Specific Guidelines
 
 ### Debug Adapter
 
 - Handle both Dart and Flutter debug scenarios
-- Support FVM integration
-- Provide meaningful error messages for missing SDKs
+- Check user configuration in `.zed/settings.json` first
+- Fall back to system dart/flutter from PATH
+- Provide meaningful error messages for missing SDKs with setup instructions
 - Auto-detect and cache device information
+- Maintain backward compatibility with `useFvm` debug config flag
 
 ### Slash Commands
 
@@ -247,10 +254,37 @@ lib.rs
 
 ### Configuration Handling
 
-- Validate all user configuration
-- Provide sensible defaults
-- Support both FVM and non-FVM projects
-- Handle missing optional fields gracefully
+- All SDK paths configured via `.zed/settings.json`
+- No automatic FVM detection (explicit configuration required)
+- Extension falls back to system dart/flutter from PATH
+- Clear error messages with setup instructions when SDK not found
+- See `docs/SETUP.md` for user-facing documentation
+
+### Manual Configuration
+
+Users must create `.zed/settings.json` in their project:
+
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "language-server"]
+      }
+    }
+  },
+  "debug": {
+    "dart": { ... },
+    "flutter": { ... }
+  }
+}
+```
+
+- Configuration is explicit and predictable
+- Works with ANY directory structure
+- Users have full control over SDK versions
+- See `docs/SETUP.md` for comprehensive setup guide
 
 ## Pre-Commit Checklist
 

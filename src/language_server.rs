@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use zed_extension_api::lsp::CompletionKind;
 use zed_extension_api::settings::LspSettings;
 use zed_extension_api::{
@@ -8,58 +7,59 @@ use zed_extension_api::{
 pub fn language_server_command(
     _language_server_id: &LanguageServerId,
     worktree: &Worktree,
-    #[allow(unused_variables)] fvm_status: &mut HashMap<String, bool>,
 ) -> Result<zed::Command> {
     let default_args = vec!["language-server".to_string(), "--protocol=lsp".to_string()];
 
-    let (command, args) = {
-        #[cfg(feature = "fvm-support")]
-        {
-            let is_fvm = crate::fvm::is_fvm_project(worktree, fvm_status);
+    // Check if user configured custom binary in settings
+    if let Ok(Some(settings)) = get_custom_binary_settings(worktree) {
+        return Ok(settings);
+    }
 
-            if is_fvm {
-                if worktree.which("fvm").is_none() {
-                    return Err(
-                        "FVM project detected (.fvm/fvm_config.json found) but 'fvm' command not found in PATH.\n\
-                         Install FVM: dart pub global activate fvm\n\
-                         Then restart Zed."
-                            .to_string(),
-                    );
-                }
+    // Fallback: Use system dart from PATH
+    if let Some(path) = worktree.which("dart") {
+        return Ok(zed::Command {
+            command: path,
+            args: default_args,
+            env: Default::default(),
+        });
+    }
 
-                let mut fvm_args = vec!["dart".to_string()];
-                fvm_args.extend(default_args.clone());
-                ("fvm".to_string(), fvm_args)
-            } else if let Some(path) = worktree.which("dart") {
-                (path, default_args)
-            } else {
-                return Err("Dart SDK not found in PATH.\n\
-                     \n\
-                     Options:\n\
-                     1. Install Dart from dart.dev/get-dart\n\
-                     2. Or configure FVM in your project: fvm use stable\n\
-                     3. Or set LSP binary path in Zed settings"
-                    .to_string());
-            }
-        }
-        #[cfg(not(feature = "fvm-support"))]
-        {
-            if let Some(path) = worktree.which("dart") {
-                (path, default_args)
-            } else {
-                return Err("Dart SDK not found in PATH.\n\
-                     \n\
-                     Install Dart from dart.dev/get-dart or set LSP binary path in Zed settings"
-                    .to_string());
-            }
-        }
-    };
+    // Not found: show helpful error with manual configuration instructions
+    Err("Dart SDK not found in PATH.\n\n\
+         For FVM projects:\n\
+         ────────────────────────────────────────────────────────────\n\
+         Create .zed/settings.json in your project root:\n\n\
+         {\n\
+           \"lsp\": {\n\
+             \"dart\": {\n\
+               \"binary\": {\n\
+                 \"path\": \"fvm\",\n\
+                 \"arguments\": [\"dart\", \"language-server\"]\n\
+               }\n\
+             }\n\
+           }\n\
+         }\n\n\
+         Then restart Zed.\n\n\
+         For system Dart:\n\
+         ────────────────────────────────────────────────────────────\n\
+         • Install from dart.dev/get-dart\n\
+         • Ensure 'dart' is in your PATH"
+        .to_string())
+}
 
-    Ok(zed::Command {
-        command,
-        args,
+fn get_custom_binary_settings(worktree: &Worktree) -> Result<Option<zed::Command>> {
+    let settings = LspSettings::for_worktree("dart", worktree)
+        .map_err(|e| format!("Failed to get LSP settings: {}", e))?;
+    let binary = settings.binary.ok_or("Binary settings not configured")?;
+    let path = binary.path.ok_or("Binary path not configured")?;
+
+    Ok(Some(zed::Command {
+        command: path,
+        args: binary
+            .arguments
+            .unwrap_or_else(|| vec!["language-server".to_string(), "--protocol=lsp".to_string()]),
         env: Default::default(),
-    })
+    }))
 }
 
 pub fn language_server_workspace_configuration(
