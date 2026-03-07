@@ -69,6 +69,60 @@ Zed provides a streamlined Flutter development experience with essential feature
 ]
 ```
 
+### FVM Configuration Migration (Breaking Change)
+
+**⚠️ Important:** The `useFvm` debug configuration option has been removed in favor of explicit binary configuration.
+
+**Old Approach (Deprecated):**
+```json
+{
+  "config": {
+    "type": "flutter",
+    "program": "lib/main.dart",
+    "useFvm": true
+  }
+}
+```
+
+**New Approach (Required):**
+
+Create `.zed/settings.json` in your project root:
+
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "language-server"]
+      }
+    }
+  },
+  "debug": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "debug_adapter"]
+      }
+    },
+    "flutter": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["flutter", "debug_adapter"]
+      }
+    }
+  }
+}
+```
+
+**Why this change?**
+- Explicit configuration is more reliable than automatic detection
+- Works in all project structures (monorepos, nested projects)
+- Clear error messages when configuration is wrong
+- Zero performance overhead from detection logic
+
+**Need help?** Run `/fvm-install` in Zed Assistant for complete setup instructions.
+
 ### Keybindings
 
 | Action | VS Code | Zed |

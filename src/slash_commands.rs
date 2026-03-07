@@ -1,98 +1,146 @@
-use crate::{device, DartExtension};
+use crate::DartExtension;
 use zed_extension_api::{Result, Worktree};
-
-fn detect_fvm_prefix(worktree: Option<&Worktree>) -> &'static str {
-    match worktree {
-        Some(wt) if wt.which("fvm").is_some() => "fvm ",
-        _ => "",
-    }
-}
 
 impl DartExtension {
     pub fn run_slash_command(
         &self,
         command: zed_extension_api::SlashCommand,
         args: Vec<String>,
-        worktree: Option<&Worktree>,
+        _worktree: Option<&Worktree>,
     ) -> Result<zed_extension_api::SlashCommandOutput> {
         match command.name.as_str() {
-            "/flutter-devices" => {
-                if let Some(wt) = worktree {
-                    let devices = device::get_cached_devices(&self.device_cache, wt)?;
-                    let fvm_prefix = detect_fvm_prefix(worktree);
-                    if devices.is_empty() {
-                        Ok(zed_extension_api::SlashCommandOutput {
-                            text: format!("No Flutter devices available. Run '{fvm_prefix}flutter devices' in a terminal to check."),
-                            sections: vec![],
-                        })
-                    } else {
-                        let output: Vec<String> = devices
-                            .iter()
-                            .map(|d| {
-                                format!(
-                                    "{} ({}) - {} {}",
-                                    d.name,
-                                    d.id,
-                                    d.platform,
-                                    if d.emulator { "[emulator]" } else { "" }
-                                )
-                            })
-                            .collect();
-                        Ok(zed_extension_api::SlashCommandOutput {
-                            text: format!("Available Flutter devices:\n{}", output.join("\n")),
-                            sections: vec![],
-                        })
-                    }
-                } else {
-                    Ok(zed_extension_api::SlashCommandOutput {
-                        text: "No worktree available.".to_string(),
-                        sections: vec![],
-                    })
-                }
-            }
-            "/flutter-doctor" => {
-                let fvm_prefix = detect_fvm_prefix(worktree);
-                Ok(zed_extension_api::SlashCommandOutput {
-                    text: format!("Run '{fvm_prefix}flutter doctor -v' in your terminal for detailed diagnostics."),
-                    sections: vec![],
-                })
-            }
+            "/flutter-install" => Ok(zed_extension_api::SlashCommandOutput {
+                text: r#"Flutter SDK Installation Guide
+════════════════════════════════════════════════════════
+
+1. Install Flutter SDK:
+   • macOS:   brew install flutter
+   • Windows: choco install flutter
+   • Linux:   snap install flutter --classic
+   • Manual:  https://docs.flutter.dev/get-started/install
+
+2. Verify installation:
+   flutter doctor
+
+3. Configure Zed (if flutter not in PATH):
+   Create .zed/settings.json in your project:
+   {
+     "lsp": {
+       "dart": {
+         "binary": {
+           "path": "/path/to/flutter/bin/dart",
+           "arguments": ["language-server"]
+         }
+       }
+     },
+     "debug": {
+       "flutter": {
+         "binary": {
+           "path": "/path/to/flutter/bin/flutter",
+           "arguments": ["debug_adapter"]
+         }
+       }
+     }
+   }
+
+4. Restart Zed to apply configuration."#
+                    .to_string(),
+                sections: vec![],
+            }),
+            "/fvm-install" => Ok(zed_extension_api::SlashCommandOutput {
+                text: r#"FVM Installation Guide
+══════════════════════════════════════
+
+1. Install FVM:
+   dart pub global activate fvm
+
+2. Ensure PATH includes pub-cache bin:
+   export PATH="$PATH:$HOME/.pub-cache/bin"
+
+3. Setup project:
+   cd your_project
+   fvm install stable
+   fvm use stable
+
+4. Configure Zed (.zed/settings.json):
+   {
+     "lsp": {
+       "dart": {
+         "binary": {
+           "path": "fvm",
+           "arguments": ["dart", "language-server"]
+         }
+       }
+     },
+     "debug": {
+       "dart": {
+         "binary": {
+           "path": "fvm",
+           "arguments": ["dart", "debug_adapter"]
+         }
+       },
+       "flutter": {
+         "binary": {
+           "path": "fvm",
+           "arguments": ["flutter", "debug_adapter"]
+         }
+       }
+     }
+   }
+
+5. Verify:
+   fvm flutter doctor
+
+6. Restart Zed to apply configuration."#
+                    .to_string(),
+                sections: vec![],
+            }),
+            "/flutter-devices" => Ok(zed_extension_api::SlashCommandOutput {
+                text: "Run 'flutter devices' in your terminal to list available devices.\n\
+                           For FVM projects: 'fvm flutter devices'"
+                    .to_string(),
+                sections: vec![],
+            }),
+            "/flutter-doctor" => Ok(zed_extension_api::SlashCommandOutput {
+                text: "Run 'flutter doctor -v' in your terminal for detailed diagnostics.\n\
+                           For FVM projects: 'fvm flutter doctor -v'"
+                    .to_string(),
+                sections: vec![],
+            }),
             "/flutter-pub" => {
-                let fvm_prefix = detect_fvm_prefix(worktree);
                 if args.is_empty() {
                     Ok(zed_extension_api::SlashCommandOutput {
-                        text: format!("Usage: /flutter-pub <command>\nAvailable commands: get, upgrade, outdated\nRun '{fvm_prefix}flutter pub <command>' in your terminal."),
+                        text: "Usage: /flutter-pub <command>\n\
+                               Available commands: get, upgrade, outdated\n\
+                               Run 'flutter pub <command>' in your terminal.\n\
+                               For FVM projects: 'fvm flutter pub <command>'"
+                            .to_string(),
                         sections: vec![],
                     })
                 } else {
                     let subcommand = &args[0];
                     Ok(zed_extension_api::SlashCommandOutput {
                         text: format!(
-                            "Run '{fvm_prefix}flutter pub {}' in your terminal.",
-                            subcommand
+                            "Run 'flutter pub {}' in your terminal.\n\
+                             For FVM projects: 'fvm flutter pub {}'",
+                            subcommand, subcommand
                         ),
                         sections: vec![],
                     })
                 }
             }
-            "/flutter-analyze" => {
-                let fvm_prefix = detect_fvm_prefix(worktree);
-                Ok(zed_extension_api::SlashCommandOutput {
-                    text: format!(
-                        "Run '{fvm_prefix}flutter analyze' in your terminal for static analysis."
-                    ),
-                    sections: vec![],
-                })
-            }
-            "/flutter-test" => {
-                let fvm_prefix = detect_fvm_prefix(worktree);
-                Ok(zed_extension_api::SlashCommandOutput {
-                    text: format!(
-                        "Run '{fvm_prefix}flutter test' in your terminal to execute tests."
-                    ),
-                    sections: vec![],
-                })
-            }
+            "/flutter-analyze" => Ok(zed_extension_api::SlashCommandOutput {
+                text: "Run 'flutter analyze' in your terminal for static analysis.\n\
+                           For FVM projects: 'fvm flutter analyze'"
+                    .to_string(),
+                sections: vec![],
+            }),
+            "/flutter-test" => Ok(zed_extension_api::SlashCommandOutput {
+                text: "Run 'flutter test' in your terminal to execute tests.\n\
+                           For FVM projects: 'fvm flutter test'"
+                    .to_string(),
+                sections: vec![],
+            }),
             _ => Err(format!("Unknown slash command: {}", command.name)),
         }
     }

@@ -4,7 +4,7 @@ use zed_extension_api::{
     StartDebuggingRequestArguments, StartDebuggingRequestArgumentsRequest, Worktree,
 };
 
-use crate::{device, DartExtension};
+use crate::DartExtension;
 
 impl DartExtension {
     pub fn get_dap_binary(
@@ -33,11 +33,6 @@ impl DartExtension {
             })
             .unwrap_or_default();
 
-        let use_fvm = user_config
-            .get("useFvm")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
-
         let debug_mode = user_config
             .get("type")
             .and_then(|v| v.as_str())
@@ -57,99 +52,64 @@ impl DartExtension {
             }
         };
 
-        let (command, arguments) = if use_fvm {
-            if worktree.which("fvm").is_none() {
-                return Err("'useFvm' is set but 'fvm' command not found in PATH.\n\n\
-                     Install FVM: dart pub global activate fvm\n\
-                     Or create .zed/settings.json with manual binary configuration."
-                    .to_string());
-            }
-            (
-                "fvm".to_string(),
-                vec![tool.to_string(), "debug_adapter".to_string()],
-            )
-        } else {
-            let tool_path = worktree.which(tool);
-            if tool_path.is_none() {
-                let tool_name = if debug_mode == "flutter" {
-                    "Flutter"
-                } else {
-                    "Dart"
-                };
-                let tool_lower = if debug_mode == "flutter" {
-                    "flutter"
-                } else {
-                    "dart"
-                };
-                let tool_site = if debug_mode == "flutter" {
-                    "flutter.dev"
-                } else {
-                    "dart.dev"
-                };
+        let tool_path = worktree.which(tool).ok_or_else(|| {
+            let tool_name = if debug_mode == "flutter" {
+                "Flutter"
+            } else {
+                "Dart"
+            };
+            let tool_lower = if debug_mode == "flutter" {
+                "flutter"
+            } else {
+                "dart"
+            };
+            let tool_site = if debug_mode == "flutter" {
+                "flutter.dev"
+            } else {
+                "dart.dev"
+            };
 
-                return Err(format!(
-                    "{} SDK not found.\n\n\
-                     ═════════════════════════════════════════════════\n\
-                     For FVM projects:\n\
-                     ═════════════════════════════════════════════════\n\
-                     Create .zed/settings.json in your project:\n\
-                     {{\n\
-                       \"debug\": {{\n\
-                         \"{}\": {{\n\
-                           \"binary\": {{\n\
-                             \"path\": \"fvm\",\n\
-                             \"arguments\": [\"{}\", \"debug_adapter\"]\n\
-                           }}\n\
-                         }}\n\
+            format!(
+                "{} SDK not found.\n\n\
+                 ═════════════════════════════════════════════════\n\
+                 For FVM projects:\n\
+                 ═════════════════════════════════════════════════\n\
+                 Create .zed/settings.json in your project:\n\
+                 {{\n\
+                   \"lsp\": {{\n\
+                     \"dart\": {{\n\
+                       \"binary\": {{\n\
+                         \"path\": \"fvm\",\n\
+                         \"arguments\": [\"dart\", \"language-server\"]\n\
                        }}\n\
                      }}\n\
-                     \n\
-                     ═════════════════════════════════════════════════\n\
-                     For system {}:\n\
-                     ═════════════════════════════════════════════════\n\
-                     • Install from {}\n\
-                     • Ensure '{}' is in your PATH",
-                    tool_name, debug_mode, tool_lower, tool_name, tool_site, tool_lower
-                ));
-            }
-            (tool.to_string(), vec!["debug_adapter".to_string()])
-        };
+                   }},\n\
+                   \"debug\": {{\n\
+                     \"{}\": {{\n\
+                       \"binary\": {{\n\
+                         \"path\": \"fvm\",\n\
+                         \"arguments\": [\"{}\", \"debug_adapter\"]\n\
+                       }}\n\
+                     }}\n\
+                   }}\n\
+                 }}\n\
+                 \n\
+                 ═════════════════════════════════════════════════\n\
+                 For system {}:\n\
+                 ═════════════════════════════════════════════════\n\
+                 • Install from {}\n\
+                 • Ensure '{}' is in your PATH\n\
+                 \n\
+                 Need help? Run /flutter-install or /fvm-install in Zed Assistant.",
+                tool_name, debug_mode, tool_lower, tool_name, tool_site, tool_lower
+            )
+        })?;
 
-        let device_id = if debug_mode == "flutter" {
-            if let Some(id) = user_config.get("device_id").and_then(|v| v.as_str()) {
-                device::ensure_device_available(id, &self.device_cache, worktree)?;
-                self.last_selected_device = Some(id.to_string());
-                id.to_string()
-            } else {
-                let selected = device::select_best_device(
-                    &self.device_cache,
-                    &self.last_selected_device,
-                    worktree,
-                )?;
-                self.last_selected_device = Some(selected.clone());
-                selected
-            }
-        } else {
-            user_config
-                .get("device_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("chrome")
-                .to_string()
-        };
+        let (command, arguments) = (tool_path, vec!["debug_adapter".to_string()]);
 
-        let platform = if debug_mode == "flutter" {
-            if let Some(p) = user_config.get("platform").and_then(|v| v.as_str()) {
-                p.to_string()
-            } else {
-                device::get_platform_for_device(&device_id, &self.device_cache, worktree)?
-            }
-        } else {
-            user_config
-                .get("platform")
-                .and_then(|v| v.as_str())
-                .unwrap_or("web")
-                .to_string()
-        };
+        let device_id = user_config.get("device_id").and_then(|v| v.as_str());
+
+        let platform = user_config.get("platform").and_then(|v| v.as_str());
 
         let cwd = user_config
             .get("cwd")
@@ -174,33 +134,30 @@ impl DartExtension {
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
 
-        let config_json = if debug_mode == "flutter" {
-            json!({
-                "type": tool,
-                "request": request,
-                "vmServiceUri": vm_service_uri,
-                "program": program,
-                "cwd": cwd.clone().unwrap_or_default(),
-                "args": args,
-                "flutterMode": "debug",
-                "deviceId": device_id,
-                "platform": platform,
-                "stopOnEntry": false,
-                "supportsHotReload": supports_hot_reload,
-                "hotReloadOnSave": hot_reload_on_save
-            })
-        } else {
-            json!({
-                "type": tool,
-                "request": request,
-                "vmServiceUri": vm_service_uri,
-                "program": program,
-                "cwd": cwd.clone().unwrap_or_default(),
-                "args": args,
-                "stopOnEntry": false
-            })
+        let mut config_map = serde_json::Map::new();
+        config_map.insert("type".to_string(), json!(tool));
+        config_map.insert("request".to_string(), json!(request));
+        if let Some(uri) = vm_service_uri {
+            config_map.insert("vmServiceUri".to_string(), json!(uri));
         }
-        .to_string();
+        config_map.insert("program".to_string(), json!(program));
+        config_map.insert("cwd".to_string(), json!(cwd.clone().unwrap_or_default()));
+        config_map.insert("args".to_string(), json!(args));
+        config_map.insert("stopOnEntry".to_string(), json!(false));
+
+        if debug_mode == "flutter" {
+            config_map.insert("flutterMode".to_string(), json!("debug"));
+            if let Some(id) = device_id {
+                config_map.insert("deviceId".to_string(), json!(id));
+            }
+            if let Some(p) = platform {
+                config_map.insert("platform".to_string(), json!(p));
+            }
+            config_map.insert("supportsHotReload".to_string(), json!(supports_hot_reload));
+            config_map.insert("hotReloadOnSave".to_string(), json!(hot_reload_on_save));
+        }
+
+        let config_json = serde_json::Value::Object(config_map).to_string();
 
         let debug_adapter_binary = DebugAdapterBinary {
             command: Some(command),
@@ -236,6 +193,47 @@ impl DartExtension {
         }
     }
 
+    fn extract_device_id_from_args(args: &[String]) -> Option<String> {
+        for i in 0..args.len() {
+            if args[i] == "-d" || args[i] == "--device-id" {
+                return args.get(i + 1).cloned();
+            }
+            if args[i].starts_with("--device-id=") {
+                return args[i].strip_prefix("--device-id=").map(|s| s.to_string());
+            }
+        }
+        None
+    }
+
+    fn extract_custom_args_from_task(args: &[String]) -> Vec<String> {
+        let mut custom_args = Vec::new();
+        let mut skip_next = false;
+
+        for arg in args.iter() {
+            if skip_next {
+                skip_next = false;
+                continue;
+            }
+
+            if arg == "flutter" || arg == "run" {
+                continue;
+            }
+
+            if arg == "-d" || arg == "--device-id" || arg.starts_with("--device-id=") {
+                if !arg.starts_with("--device-id=") {
+                    skip_next = true;
+                }
+                continue;
+            }
+
+            if arg.starts_with("--") {
+                custom_args.push(arg.clone());
+            }
+        }
+
+        custom_args
+    }
+
     pub fn dap_config_to_scenario(
         &mut self,
         config: zed::DebugConfig,
@@ -266,11 +264,6 @@ impl DartExtension {
         }
 
         if config.adapter == "Flutter" {
-            let device_id = self
-                .last_selected_device
-                .clone()
-                .unwrap_or_else(|| "chrome".to_string());
-            config_json["deviceId"] = json!(device_id);
             config_json["supportsHotReload"] = json!(true);
             config_json["hotReloadOnSave"] = json!(true);
         }
@@ -295,20 +288,18 @@ impl DartExtension {
             let args = &build_task.args;
 
             if args.contains(&"run".to_string()) {
-                let device_id = device::extract_device_id(&build_task).unwrap_or_else(|| {
-                    self.last_selected_device
-                        .clone()
-                        .unwrap_or_else(|| "chrome".to_string())
-                });
-
-                let custom_args = device::extract_custom_args(&build_task);
+                let device_id = Self::extract_device_id_from_args(args);
+                let custom_args = Self::extract_custom_args_from_task(args);
 
                 let mut config = json!({
                     "type": "flutter",
                     "request": "launch",
-                    "deviceId": device_id,
                     "program": "lib/main.dart"
                 });
+
+                if let Some(id) = device_id {
+                    config["deviceId"] = json!(id);
+                }
 
                 if !custom_args.is_empty() {
                     config["args"] = json!(custom_args);
@@ -359,11 +350,17 @@ impl DartExtension {
             let args = &build_task.args;
 
             if args.contains(&"run".to_string()) {
-                let device_id = self
-                    .last_selected_device
-                    .clone()
-                    .unwrap_or_else(|| "chrome".to_string());
-                let mut run_args = vec!["run".to_string(), "-d".to_string(), device_id];
+                let mut run_args = vec!["run".to_string()];
+
+                // Check if device is already specified in args
+                let has_device = args.iter().any(|arg| {
+                    arg == "-d" || arg == "--device-id" || arg.starts_with("--device-id=")
+                });
+
+                if !has_device {
+                    // Let Flutter auto-select device
+                }
+
                 run_args.extend(args.iter().skip(1).filter(|a| *a != "run").cloned());
 
                 return Ok(zed::DebugRequest::Launch(zed::LaunchRequest {

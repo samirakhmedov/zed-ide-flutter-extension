@@ -6,10 +6,6 @@ mod language_server;
 #[cfg(feature = "slash-commands")]
 mod slash_commands;
 
-mod device;
-
-pub use device::DeviceInfo;
-
 #[cfg(all(feature = "language-server", not(feature = "debug-adapter")))]
 use zed_extension_api::serde_json;
 #[cfg(feature = "language-server")]
@@ -20,17 +16,11 @@ use zed_extension_api::{
     Worktree,
 };
 
-struct DartExtension {
-    device_cache: Vec<DeviceInfo>,
-    last_selected_device: Option<String>,
-}
+struct DartExtension;
 
 impl zed_extension_api::Extension for DartExtension {
     fn new() -> Self {
-        Self {
-            device_cache: Vec::new(),
-            last_selected_device: None,
-        }
+        Self
     }
 
     #[cfg(feature = "debug-adapter")]

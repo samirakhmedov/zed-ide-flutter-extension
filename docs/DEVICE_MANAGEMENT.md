@@ -1,125 +1,194 @@
 # Device Management Guide
 
-This guide explains how to manage Flutter devices in Zed for development and debugging.
+This guide explains how to configure target devices for Flutter debugging in Zed.
 
 ## Overview
 
-The Flutter extension for Zed provides intelligent device management to streamline your development workflow across mobile, web, and desktop platforms.
+Flutter applications can run on multiple platforms: mobile (iOS, Android), web, and desktop. This extension allows you to specify which device to target when debugging.
 
-## Device Detection
+## Device Selection
 
-### Automatic Device Detection
+### Manual Selection (Recommended)
 
-The extension automatically detects available Flutter devices including:
-- **iOS Simulators** (macOS only)
-- **Physical iOS Devices** (macOS only)
-- **Android Emulators**
-- **Physical Android Devices**
-- **Chrome/Edge Browsers** (web)
-- **Desktop Platforms** (macOS, Windows, Linux)
+Specify the device explicitly in your debug configuration:
 
-### Viewing Available Devices
-
-**Method 1: Slash Command**
-```
-/flutter-devices
+```json
+{
+  "config": {
+    "type": "flutter",
+    "request": "launch",
+    "program": "lib/main.dart",
+    "deviceId": "chrome"
+  }
+}
 ```
 
-**Method 2: Task**
-Run the "Flutter: Devices" task from the task picker (`Cmd+Shift+P` → "Tasks")
+### Automatic Selection
 
-**Method 3: Terminal**
+If you don't specify `deviceId`, Flutter automatically selects the best available device:
+1. Physical device (if connected)
+2. Running emulator/simulator
+3. Web browser (Chrome)
+
+Flutter's built-in selection is intelligent and works well for most cases.
+
+## Common Device IDs
+
+| Platform | Device ID | Notes |
+|----------|-----------|-------|
+| **Web** | `chrome` | Chrome browser |
+| **Web** | `edge` | Edge browser |
+| **Web** | `web-server` | Headless web server |
+| **Desktop** | `macos` | macOS desktop app |
+| **Desktop** | `windows` | Windows desktop app |
+| **Desktop** | `linux` | Linux desktop app |
+| **Mobile** | Device-specific | Run `flutter devices` to list |
+
+## Viewing Available Devices
+
+### Method 1: Terminal
 ```bash
 flutter devices
 ```
 
-## Device Selection
+### Method 2: FVM Project
+```bash
+fvm flutter devices
+```
 
-### Automatic Selection
+### Method 3: Zed Assistant
+```
+/flutter-devices
+```
 
-When you start debugging without specifying a device, the extension automatically selects the best device using these heuristics:
+## Configuration Examples
 
-1. **Last used device** (if still available)
-2. **Physical device** (non-emulator, non-web)
-3. **Emulator/Simulator**
-4. **Web browser** (Chrome)
-5. **First available device**
-
-### Manual Selection
-
-Specify a device in your debug configuration:
-
+### Run on Chrome (Web)
 ```json
 {
-  "type": "flutter",
-  "request": "launch",
-  "deviceId": "chrome",
-  "program": "lib/main.dart"
+  "config": {
+    "type": "flutter",
+    "request": "launch",
+    "program": "lib/main.dart",
+    "deviceId": "chrome",
+    "platform": "web"
+  }
 }
 ```
 
-### Device IDs
+### Run on iOS Simulator
+```json
+{
+  "config": {
+    "type": "flutter",
+    "request": "launch",
+    "program": "lib/main.dart",
+    "deviceId": "<simulator-id>",
+    "platform": "ios"
+  }
+}
+```
 
-Common device IDs:
-- `chrome` - Chrome web browser
-- `edge` - Edge web browser
-- `macos` - macOS desktop
-- `windows` - Windows desktop
-- `linux` - Linux desktop
-- Device-specific IDs (e.g., `iphone-15-pro`, `sdk-gph64-x86-64`)
+Run `flutter devices` to get the simulator ID.
 
-## Device Caching
+### Run on Android Emulator
+```json
+{
+  "config": {
+    "type": "flutter",
+    "request": "launch",
+    "program": "lib/main.dart",
+    "deviceId": "<emulator-id>",
+    "platform": "android"
+  }
+}
+```
 
-### How It Works
+Run `flutter devices` to get the emulator ID.
 
-- Devices are cached for **5 minutes** to improve performance
-- Cache is automatically refreshed when stale
-- Cache persists across debug sessions
+### Run on Physical Device
 
-### Force Refresh
+1. **Connect the device** via USB or network
+2. **Enable developer mode** on the device
+3. **Trust the computer** (iOS) or **enable USB debugging** (Android)
+4. Run `flutter devices` to get the device ID
+5. Add `deviceId` to your debug configuration
 
-To force a device list refresh:
-1. Run `/flutter-devices` slash command
-2. Run `flutter devices` in terminal
-3. Wait for cache to expire (5 minutes)
+### Multiple Debug Configurations
+
+Create separate configurations for different devices:
+
+```json
+[
+  {
+    "label": "Flutter: Chrome",
+    "adapter": "Flutter",
+    "config": {
+      "type": "flutter",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "deviceId": "chrome"
+    }
+  },
+  {
+    "label": "Flutter: iOS",
+    "adapter": "Flutter",
+    "config": {
+      "type": "flutter",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "deviceId": "iphone-15-pro"
+    }
+  },
+  {
+    "label": "Flutter: Android",
+    "adapter": "Flutter",
+    "config": {
+      "type": "flutter",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "deviceId": "sdk-gph64-x86-64"
+    }
+  }
+]
+```
 
 ## Platform-Specific Notes
 
 ### iOS (macOS only)
 
 **Simulators:**
-- Must be started before detection
+- Must be started before debugging
 - Xcode must be installed
 - Run `open -a Simulator` to launch
 
 **Physical Devices:**
-- Must be connected via USB or network
-- Trust dialog must be accepted on device
+- Connect via USB or network
+- Trust dialog must be accepted
 - Developer mode must be enabled
 
 ### Android
 
 **Emulators:**
 - Android Studio must be installed
-- Use "Flutter: Emulators" task to list/create emulators
 - Start emulator before debugging
 
 **Physical Devices:**
-- USB debugging must be enabled
+- Enable USB debugging
 - Accept debugging prompt on device
 - ADB must be in PATH
 
 ### Web
 
 - Chrome or Edge browser required
-- Automatically detected when installed
+- Automatically available when installed
 - No additional setup needed
 
 ### Desktop
 
 - Platform-specific SDK required
 - Build tools must be installed
-- Works on respective platform only (macOS app on macOS, etc.)
+- Works on respective platform only
 
 ## Troubleshooting
 
@@ -130,7 +199,7 @@ To force a device list refresh:
    flutter doctor -v
    ```
 
-2. **Restart device/emulator**
+2. **Start an emulator/simulator**
 
 3. **Refresh device list:**
    ```bash
@@ -144,70 +213,41 @@ To force a device list refresh:
 
 ### Device Not Listed
 
-1. Ensure device is running/emulator is started
-2. Check platform-specific requirements (USB debugging, etc.)
-3. Run `flutter devices` in terminal
+1. Ensure the device/emulator is running
+2. Check platform-specific requirements
+3. Run `flutter devices` to verify Flutter sees the device
 4. Restart Zed
 
 ### Wrong Device Selected
 
-Specify the device explicitly in debug configuration:
-```json
-{
-  "deviceId": "your-device-id"
-}
-```
-
-## Advanced Configuration
-
-### Custom Device Selection
-
-Create a debug configuration with specific device:
+Specify the device explicitly in your debug configuration:
 
 ```json
 {
-  "label": "Flutter: Run on iPhone",
-  "adapter": "Flutter",
-  "type": "flutter",
-  "request": "launch",
-  "deviceId": "iphone-15-pro",
-  "program": "lib/main.dart"
+  "config": {
+    "deviceId": "your-device-id"
+  }
 }
 ```
 
-### Multiple Devices
+### Device Disconnects During Debug
 
-To debug on multiple devices simultaneously:
-1. Create separate debug configurations
-2. Specify different `deviceId` for each
-3. Start debug sessions independently
-
-### Device-Specific Arguments
-
-Pass device-specific arguments:
-
-```json
-{
-  "type": "flutter",
-  "request": "launch",
-  "deviceId": "chrome",
-  "program": "lib/main.dart",
-  "args": ["--web-port=5000"]
-}
-```
+This is a Flutter/Dart debug adapter limitation. If the device disconnects:
+1. Stop the debug session
+2. Reconnect the device or restart the emulator
+3. Start a new debug session
 
 ## Best Practices
 
-1. **Use physical devices** for accurate performance testing
-2. **Use emulators** for quick iteration during development
-3. **Use web** for fastest testing of UI changes
-4. **Test on multiple platforms** before release
-5. **Keep emulators running** to avoid startup delays
-6. **Use `/flutter-devices`** to quickly check available devices
+1. **Use explicit device IDs** in debug configurations for predictability
+2. **Test on physical devices** for accurate performance
+3. **Use emulators** for quick iteration during development
+4. **Use web** for fastest testing of UI changes
+5. **Test on multiple platforms** before release
+6. **Keep emulators running** to avoid startup delays
 
 ## Related Documentation
 
-- [Troubleshooting Guide](./TROUBLESHOOTING.md)
 - [Configuration Guide](./CONFIGURATION.md)
-- [Keyboard Shortcuts](./KEYBOARD_SHORTCUTS.md)
-- [Flutter DevTools](./DEVTOOLS_GUIDE.md)
+- [Troubleshooting Guide](./TROUBLESHOOTING.md)
+- [Flutter Tasks Guide](./FLUTTER_TASKS.md)

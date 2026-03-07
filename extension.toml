@@ -1,6 +1,6 @@
 id = "flutter"
 name = "Flutter"
-description = "Dart and Flutter support with hot reload, FVM integration, and comprehensive development tools."
+description = "Dart and Flutter support with manual SDK configuration and hot reload."
 version = "1.0.0"
 schema_version = 1
 authors = [
@@ -48,4 +48,12 @@ requires_argument = false
 
 [slash_commands.flutter-test]
 description = "Run Flutter tests"
+requires_argument = false
+
+[slash_commands.flutter-install]
+description = "Guide for installing Flutter SDK"
+requires_argument = false
+
+[slash_commands.fvm-install]
+description = "Guide for installing FVM (Flutter Version Manager)"
 requires_argument = false

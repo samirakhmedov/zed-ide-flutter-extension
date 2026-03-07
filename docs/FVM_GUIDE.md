@@ -1,44 +1,34 @@
 # FVM Integration Guide
 
-This guide explains how to use the Dart/Flutter extension with FVM (Flutter Version Manager) projects.
+This guide explains how to configure the Dart/Flutter extension for Zed with FVM (Flutter Version Manager).
 
 ## What is FVM?
 
-[FVM](https://fvm.app/) is a simple CLI to manage Flutter SDK versions per project. It allows you to:
+[FVM](https://fvm.app/) is a CLI to manage Flutter SDK versions per project. It allows you to:
 - Use different Flutter versions for different projects
 - Ensure consistent Flutter versions across development teams
 - Easily switch between Flutter versions
 
-## How FVM Integration Works
+## Manual Configuration Required
 
-The Dart/Flutter extension for Zed **automatically detects** FVM-managed projects and adjusts commands accordingly.
+This extension requires **explicit manual configuration** for FVM projects. There is no automatic detection - you must configure SDK paths in `.zed/settings.json`.
 
-### Automatic Detection
+This approach provides:
+- ✅ Predictable behavior in all scenarios
+- ✅ Works with monorepos and nested projects
+- ✅ Clear error messages when something is wrong
+- ✅ Zero performance overhead from detection
 
-The extension checks for `.fvm/fvm_config.json` in your project root. If found, it automatically:
-- Uses `fvm flutter` instead of `flutter`
-- Uses `fvm dart` instead of `dart`
-- Routes all Flutter/Dart commands through FVM
-
-### Where FVM is Applied
-
-| Feature | FVM Support | How It Works |
-|---------|-------------|--------------|
-| **Language Server** | ⚠️ Manual config | Requires explicit configuration in `.zed/settings.json` |
-| **Debug Adapter** | ✅ Auto-detected | Uses `useFvm: true` flag or auto-detects FVM in PATH |
-| **Slash Commands** | ✅ Auto-detected | Commands suggest `fvm flutter` when FVM is in PATH |
-| **Tasks** | ❌ Manual only | Use `fvm` prefix explicitly in task commands |
-| **Hot Reload** | ✅ Via debug adapter | Works when debugging with FVM |
-
-> **Note:** Language server requires manual configuration. See the Setup Guide section below for instructions.
-
-## Setup Guide
+## Quick Setup
 
 ### 1. Install FVM
 
 ```bash
 # Install FVM globally
 dart pub global activate fvm
+
+# Ensure PATH includes pub-cache bin
+export PATH="$PATH:$HOME/.pub-cache/bin"
 
 # Verify installation
 fvm --version
@@ -59,50 +49,50 @@ fvm use stable
 # This creates .fvm/fvm_config.json
 ```
 
-### 3. Verify Detection
+### 3. Configure Zed
 
-The extension automatically detects FVM. To verify:
-
-1. **Language Server**: Open a Dart file - the language server should start via FVM
-2. **Debug Adapter**: Create a debug configuration (no special config needed)
-3. **Console**: Check Zed's console for FVM-related messages
-
-## Debug Configuration
-
-### Basic Flutter Debug (FVM Auto-Detected)
+Create `.zed/settings.json` in your project root:
 
 ```json
 {
-  "program": "lib/main.dart",
-  "type": "flutter"
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "language-server"]
+      }
+    }
+  },
+  "debug": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "debug_adapter"]
+      }
+    },
+    "flutter": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["flutter", "debug_adapter"]
+      }
+    }
+  }
 }
 ```
 
-The extension will automatically use FVM if detected.
+### 4. Restart Zed
 
-### Force FVM Usage
+Close and reopen Zed to apply the configuration.
 
-If auto-detection doesn't work, force FVM:
+## Feature Support
 
-```json
-{
-  "program": "lib/main.dart",
-  "type": "flutter",
-  "useFvm": true
-}
-```
-
-### Disable FVM
-
-To use global Flutter instead of FVM:
-
-```json
-{
-  "program": "lib/main.dart",
-  "type": "flutter",
-  "useFvm": false
-}
-```
+| Feature | Configuration | Notes |
+|---------|---------------|-------|
+| **Language Server** | Manual `.zed/settings.json` | Required for FVM |
+| **Debug Adapter** | Manual `.zed/settings.json` | Required for FVM |
+| **Slash Commands** | Guidance only | Suggest both `flutter` and `fvm flutter` |
+| **Tasks** | Manual | Use `fvm` prefix in task commands |
+| **Hot Reload** | Via debug adapter | Works when properly configured |
 
 ## Common Scenarios
 
@@ -125,7 +115,7 @@ To use global Flutter instead of FVM:
    fvm flutter pub get
    ```
 
-4. The extension automatically uses the configured version
+4. Each team member creates `.zed/settings.json` with the FVM configuration
 
 ### Testing Different Flutter Versions
 
@@ -144,9 +134,7 @@ To use global Flutter instead of FVM:
    fvm use stable  # or beta, 3.10.0
    ```
 
-3. Restart Zed to refresh FVM detection
-
-4. Run/debug your app with the new version
+3. Restart Zed to use the new version
 
 ### CI/CD Integration
 
@@ -168,195 +156,153 @@ To use global Flutter instead of FVM:
    fvm flutter build apk
    ```
 
-3. Zed extension uses the same version locally
+## Task Configuration
+
+For tasks in `.zed/tasks.json`, use `fvm` explicitly:
+
+```json
+[
+  {
+    "label": "Flutter: Run",
+    "command": "fvm",
+    "args": ["flutter", "run"],
+    "tags": ["flutter-main"]
+  },
+  {
+    "label": "Flutter: Pub Get",
+    "command": "fvm",
+    "args": ["flutter", "pub", "get"]
+  },
+  {
+    "label": "Flutter: Test",
+    "command": "fvm",
+    "args": ["flutter", "test"]
+  }
+]
+```
 
 ## Troubleshooting
 
-### FVM Not Detected
+### "Dart SDK not found" or "Flutter SDK not found"
 
-**Symptom**: Extension uses global Flutter instead of FVM
+**Solution**: Create `.zed/settings.json` with FVM configuration (see Quick Setup above).
 
-**Solutions**:
-1. Verify `.fvm/fvm_config.json` exists in project root
-2. Restart Zed to refresh detection
-3. Add `"useFvm": true` to debug config
-
-### FVM Command Not Found
-
-**Symptom**: Error "FVM command not found"
+### "fvm command not found"
 
 **Solution**:
 ```bash
 # Install FVM
 dart pub global activate fvm
 
-# Ensure FVM is in PATH
-export PATH="$PATH":"$HOME/.pub-cache/bin"
+# Add to PATH (add to your shell profile for persistence)
+export PATH="$PATH:$HOME/.pub-cache/bin"
 
 # Verify
 fvm --version
 ```
 
-### Wrong Flutter Version
+### LSP still not working after configuration
 
-**Symptom**: Extension uses wrong Flutter version
-
-**Solution**:
-```bash
-# Check configured version
-fvm list
-
-# Reinstall correct version
-fvm install <version>
-fvm use <version>
-
-# Restart Zed
-```
-
-### Language Server Issues
-
-**Symptom**: Language server not starting with FVM
-
-**Solution**:
-1. Check Zed's console for errors
-2. Verify FVM is installed: `fvm --version`
-3. Test manually: `fvm dart language-server`
-4. Check `.fvm/fvm_config.json` is valid JSON
-
-## Team Workflow
-
-### Recommended FVM Workflow
-
-1. **Project Setup**:
+1. **Verify JSON is valid**:
    ```bash
-   # Create new Flutter project
-   flutter create my_app
-   cd my_app
-   
-   # Initialize FVM
-   fvm install stable
-   fvm use stable
+   cat .zed/settings.json | python -m json.tool
    ```
 
-2. **Version Control**:
+2. **Restart Zed completely** (not just reload)
+
+3. **Check Zed log**:
+   - Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Windows/Linux)
+   - Type "zed: open log"
+   - Search for "dart" or errors
+
+4. **Verify FVM is working**:
    ```bash
-   # Add FVM config to git
-   git add .fvm/fvm_config.json
-   git commit -m "Add FVM configuration"
+   cd /path/to/your/project
+   fvm dart --version
+   fvm flutter --version
    ```
 
-3. **Team Onboarding**:
-   ```bash
-   # New team member setup
-   git clone <repo>
-   cd my_app
-   
-   # Install FVM
-   dart pub global activate fvm
-   
-   # Install configured Flutter version
-   fvm install
-   
-   # Get dependencies
-   fvm flutter pub get
-   ```
+### Multiple Flutter projects in workspace
 
-4. **Development**:
-   - Open project in Zed
-   - Extension auto-detects FVM
-   - Code with correct Flutter version
-
-5. **Version Updates**:
-   ```bash
-   # Update Flutter version
-   fvm install newer_version
-   fvm use newer_version
-   
-   # Restart Zed to refresh
-   ```
-
-### .gitignore for FVM
-
-Add to your `.gitignore`:
+Each Flutter project needs its own `.zed/settings.json` in the project root:
 
 ```
-# FVM
-.fvm/flutter_sdk
+workspace/
+├── project_a/
+│   ├── .zed/settings.json  ← Configure for this project
+│   └── pubspec.yaml
+└── project_b/
+    ├── .zed/settings.json  ← Configure for this project
+    └── pubspec.yaml
 ```
 
-**Note**: Keep `.fvm/fvm_config.json` in version control.
+## Quick Reference
 
-## Best Practices
-
-### 1. Consistent Team Versions
-
-Always commit `.fvm/fvm_config.json` to ensure all team members use the same Flutter version.
-
-### 2. Update Flutter Version
+### FVM Commands
 
 ```bash
-# Install new version
+# Install FVM
+dart pub global activate fvm
+
+# Install Flutter version
+fvm install stable
 fvm install 3.19.0
 
-# Use in project
-fvm use 3.19.0
+# Use version in project
+fvm use stable
 
-# Test thoroughly
+# List installed versions
+fvm list
+
+# Run Flutter commands
+fvm flutter pub get
+fvm flutter run
 fvm flutter test
-fvm flutter analyze
+fvm flutter build apk
 
-# Commit config change
-git add .fvm/fvm_config.json
-git commit -m "Update Flutter to 3.19.0"
+# Run Dart commands
+fvm dart analyze
+fvm dart test
 ```
 
-### 3. Multiple Projects
+### Zed Configuration Template
 
-Each project can have its own Flutter version:
-
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "language-server"]
+      }
+    }
+  },
+  "debug": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "debug_adapter"]
+      }
+    },
+    "flutter": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["flutter", "debug_adapter"]
+      }
+    }
+  }
+}
 ```
-project_a/
-  .fvm/fvm_config.json  # Uses stable
-
-project_b/
-  .fvm/fvm_config.json  # Uses beta
-```
-
-### 4. Documentation
-
-Add to your project's README:
-
-```markdown
-## Setup
-
-1. Install FVM: `dart pub global activate fvm`
-2. Install Flutter: `fvm install`
-3. Get dependencies: `fvm flutter pub get`
-4. Open in Zed (FVM auto-detected)
-```
-
-## FVM vs Global Flutter
-
-| Feature | FVM | Global Flutter |
-|---------|-----|----------------|
-| Multiple versions | ✅ Yes | ❌ No |
-| Per-project versions | ✅ Yes | ❌ No |
-| Team consistency | ✅ Yes | ⚠️ Manual |
-| Version switching | ✅ Easy | ⚠️ Reinstall |
-| CI/CD integration | ✅ Built-in | ⚠️ Manual |
 
 ## Resources
 
 - [FVM Official Documentation](https://fvm.app/)
 - [FVM GitHub Repository](https://github.com/fluttertools/fvm)
-- [Flutter Versioning Best Practices](https://docs.flutter.dev/release/upgrade)
+- [Flutter Installation Guide](https://docs.flutter.dev/get-started/install)
+- [Zed Extension Documentation](https://zed.dev/docs/extensions/developing-extensions)
 
-## Support
+## Getting Help
 
-If you encounter FVM-related issues:
-
-1. Check this guide
-2. Verify FVM installation: `fvm doctor`
-3. Check Zed console for error messages
-4. Try manual FVM command: `fvm flutter --version`
-5. Report issues on the extension's GitHub repository
+- Run `/fvm-install` in Zed Assistant for setup instructions
+- Run `/flutter-install` in Zed Assistant for Flutter SDK installation guide
+- Check the [GitHub Issues](https://github.com/samirakhmedov/zed-ide-flutter-extension/issues)

@@ -36,7 +36,7 @@ fvm --version
 **Causes**:
 - Flutter not installed
 - Flutter not in PATH
-- Incorrect PATH configuration
+- Manual configuration not set up
 
 **Solutions**:
 
@@ -54,6 +54,31 @@ echo 'export PATH="$PATH:/path/to/flutter/bin"' >> ~/.zshrc  # or ~/.bashrc
 flutter --version
 ```
 
+**For FVM projects**, create `.zed/settings.json`:
+
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "language-server"]
+      }
+    }
+  },
+  "debug": {
+    "flutter": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["flutter", "debug_adapter"]
+      }
+    }
+  }
+}
+```
+
+Need help? Run `/flutter-install` or `/fvm-install` in Zed Assistant.
+
 ### 2. Dart SDK Not Found
 
 **Symptom**: Error "Dart SDK not found"
@@ -61,7 +86,7 @@ flutter --version
 **Causes**:
 - Dart not installed
 - Dart not in PATH
-- Flutter's Dart not accessible
+- Manual configuration not set up
 
 **Solutions**:
 
@@ -77,9 +102,24 @@ export PATH="$PATH:/path/to/flutter/bin/cache/dart-sdk/bin"
 dart --version
 ```
 
+**For FVM projects**, use manual configuration in `.zed/settings.json`:
+
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "language-server"]
+      }
+    }
+  }
+}
+```
+
 ### 3. FVM Command Not Found
 
-**Symptom**: Error "FVM is configured but 'fvm' command not found"
+**Symptom**: Error "'fvm' command not found"
 
 **Causes**:
 - FVM not installed
@@ -100,6 +140,23 @@ echo 'export PATH="$PATH:$HOME/.pub-cache/bin"' >> ~/.zshrc
 # Verify
 fvm --version
 ```
+
+After installing FVM, configure Zed by creating `.zed/settings.json`:
+
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "language-server"]
+      }
+    }
+  }
+}
+```
+
+Run `/fvm-install` in Zed Assistant for complete setup instructions.
 
 ### 4. Device Not Found
 
@@ -207,39 +264,120 @@ ls -la .fvm/fvm_config.json
    lsof -ti:8080 | xargs kill -9  # Web server
    ```
 
-### 8. FVM Not Detected
+### 8. Manual Configuration Required
 
-**Symptom**: Extension uses global Flutter instead of FVM
+**Symptom**: Extension uses wrong Flutter version or can't find SDK
 
 **Causes**:
-- `.fvm/fvm_config.json` missing
-- FVM not installed
-- Extension cache issue
+- No `.zed/settings.json` configured
+- Incorrect binary path
+- For FVM: not using `fvm` wrapper
 
-**Solutions**:
+**Solution**: Create `.zed/settings.json` in your project root
 
-```bash
-# Check for FVM config
-ls -la .fvm/fvm_config.json
+**For System Flutter (in PATH):**
 
-# If missing, initialize FVM
-fvm install stable
-fvm use stable
+No configuration needed if `flutter` is in your PATH. The extension will use it automatically.
 
-# Force FVM in config
-```
+**For FVM projects:**
 
 ```json
 {
-  "type": "flutter",
-  "program": "lib/main.dart",
-  "useFvm": true
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "language-server"]
+      }
+    }
+  },
+  "debug": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "debug_adapter"]
+      }
+    },
+    "flutter": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["flutter", "debug_adapter"]
+      }
+    }
+  }
+}
+```
+
+**For custom Flutter paths:**
+
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "/path/to/flutter/bin/dart",
+        "arguments": ["language-server"]
+      }
+    }
+  },
+  "debug": {
+    "flutter": {
+      "binary": {
+        "path": "/path/to/flutter/bin/flutter",
+        "arguments": ["debug_adapter"]
+      }
+    }
+  }
 }
 ```
 
 ```bash
-# Restart Zed
+# Restart Zed after creating config
 ```
+
+**For FVM:**
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "language-server"]
+      }
+    }
+  },
+  "debug": {
+    "dart": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["dart", "debug_adapter"]
+      }
+    },
+    "flutter": {
+      "binary": {
+        "path": "fvm",
+        "arguments": ["flutter", "debug_adapter"]
+      }
+    }
+  }
+}
+```
+
+**For custom Flutter path:**
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": {
+        "path": "/path/to/flutter/bin/dart",
+        "arguments": ["language-server"]
+      }
+    }
+  }
+}
+```
+
+Need help? Run `/flutter-install` or `/fvm-install` in Zed Assistant.
 
 ### 9. Platform-Specific Issues
 
