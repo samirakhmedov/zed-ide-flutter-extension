@@ -1,6 +1,13 @@
 use crate::{device, DartExtension};
 use zed_extension_api::{Result, Worktree};
 
+fn detect_fvm_prefix(worktree: Option<&Worktree>) -> &'static str {
+    match worktree {
+        Some(wt) if wt.which("fvm").is_some() => "fvm ",
+        _ => "",
+    }
+}
+
 impl DartExtension {
     pub fn run_slash_command(
         &self,
@@ -12,9 +19,10 @@ impl DartExtension {
             "/flutter-devices" => {
                 if let Some(wt) = worktree {
                     let devices = device::get_cached_devices(&self.device_cache, wt)?;
+                    let fvm_prefix = detect_fvm_prefix(worktree);
                     if devices.is_empty() {
                         Ok(zed_extension_api::SlashCommandOutput {
-                            text: "No Flutter devices available. Run 'flutter devices' in a terminal to check.".to_string(),
+                            text: format!("No Flutter devices available. Run '{fvm_prefix}flutter devices' in a terminal to check."),
                             sections: vec![],
                         })
                     } else {
@@ -42,33 +50,49 @@ impl DartExtension {
                     })
                 }
             }
-            "/flutter-doctor" => Ok(zed_extension_api::SlashCommandOutput {
-                text: "Run 'flutter doctor -v' in your terminal for detailed diagnostics."
-                    .to_string(),
-                sections: vec![],
-            }),
+            "/flutter-doctor" => {
+                let fvm_prefix = detect_fvm_prefix(worktree);
+                Ok(zed_extension_api::SlashCommandOutput {
+                    text: format!("Run '{fvm_prefix}flutter doctor -v' in your terminal for detailed diagnostics."),
+                    sections: vec![],
+                })
+            }
             "/flutter-pub" => {
+                let fvm_prefix = detect_fvm_prefix(worktree);
                 if args.is_empty() {
                     Ok(zed_extension_api::SlashCommandOutput {
-                        text: "Usage: /flutter-pub <command>\nAvailable commands: get, upgrade, outdated".to_string(),
+                        text: format!("Usage: /flutter-pub <command>\nAvailable commands: get, upgrade, outdated\nRun '{fvm_prefix}flutter pub <command>' in your terminal."),
                         sections: vec![],
                     })
                 } else {
                     let subcommand = &args[0];
                     Ok(zed_extension_api::SlashCommandOutput {
-                        text: format!("Run 'flutter pub {}' in your terminal.", subcommand),
+                        text: format!(
+                            "Run '{fvm_prefix}flutter pub {}' in your terminal.",
+                            subcommand
+                        ),
                         sections: vec![],
                     })
                 }
             }
-            "/flutter-analyze" => Ok(zed_extension_api::SlashCommandOutput {
-                text: "Run 'flutter analyze' in your terminal for static analysis.".to_string(),
-                sections: vec![],
-            }),
-            "/flutter-test" => Ok(zed_extension_api::SlashCommandOutput {
-                text: "Run 'flutter test' in your terminal to execute tests.".to_string(),
-                sections: vec![],
-            }),
+            "/flutter-analyze" => {
+                let fvm_prefix = detect_fvm_prefix(worktree);
+                Ok(zed_extension_api::SlashCommandOutput {
+                    text: format!(
+                        "Run '{fvm_prefix}flutter analyze' in your terminal for static analysis."
+                    ),
+                    sections: vec![],
+                })
+            }
+            "/flutter-test" => {
+                let fvm_prefix = detect_fvm_prefix(worktree);
+                Ok(zed_extension_api::SlashCommandOutput {
+                    text: format!(
+                        "Run '{fvm_prefix}flutter test' in your terminal to execute tests."
+                    ),
+                    sections: vec![],
+                })
+            }
             _ => Err(format!("Unknown slash command: {}", command.name)),
         }
     }

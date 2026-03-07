@@ -68,15 +68,14 @@ DevTools provides:
 ## Task System FVM Integration
 
 **Status**: ⚠️ Limited  
-**Reason**: Zed task system doesn't support dynamic command modification
+**Reason**: Zed task system uses static JSON configuration
 
 **Current State**:
-- FVM auto-detection works for:
-  - Language server
-  - Debug adapter
-- Manual task commands use hardcoded `flutter`/`dart`
+- Tasks are defined in `.zed/tasks.json` as static JSON
+- No automatic command prefixing for FVM
+- Users must explicitly use `fvm flutter` or `fvm dart` in task commands
 
-**Workaround**: Create custom tasks for FVM projects or rely on debug adapter FVM support
+**Workaround**: Use the task templates provided in [CONFIGURATION.md](./CONFIGURATION.md#task-templates) or [FLUTTER_TASKS.md](./FLUTTER_TASKS.md#task-templates). Copy the FVM templates to your `.zed/tasks.json`.
 
 ## Debug Locators
 

@@ -22,14 +22,15 @@ The extension checks for `.fvm/fvm_config.json` in your project root. If found, 
 
 ### Where FVM is Applied
 
-✅ **Supported** (automatic FVM routing):
-- Language server (Dart analysis server)
-- Debug adapter (Flutter/Dart debugging)
-- Hot reload/restart during debugging
+| Feature | FVM Support | How It Works |
+|---------|-------------|--------------|
+| **Language Server** | ⚠️ Manual config | Requires explicit configuration in `.zed/settings.json` |
+| **Debug Adapter** | ✅ Auto-detected | Uses `useFvm: true` flag or auto-detects FVM in PATH |
+| **Slash Commands** | ✅ Auto-detected | Commands suggest `fvm flutter` when FVM is in PATH |
+| **Tasks** | ❌ Manual only | Use `fvm` prefix explicitly in task commands |
+| **Hot Reload** | ✅ Via debug adapter | Works when debugging with FVM |
 
-⚠️ **Manual** (requires explicit config):
-- Task commands (use task picker)
-- Slash commands (guidance only)
+> **Note:** Language server requires manual configuration. See the Setup Guide section below for instructions.
 
 ## Setup Guide
 

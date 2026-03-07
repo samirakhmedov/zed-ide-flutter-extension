@@ -287,7 +287,180 @@ Tasks support Zed's built-in variables:
 
 ## FVM Integration
 
-All Flutter tasks automatically detect and use FVM (Flutter Version Manager) when available. If your project has `.fvm/fvm_config.json`, tasks will use `fvm flutter` instead of `flutter`.
+> **Note:** Zed's task system does not automatically detect FVM. For FVM projects, you must use `fvm flutter` and `fvm dart` commands explicitly in your task definitions.
+>
+> See the **Task Templates** section below for ready-to-use templates for both FVM and system Flutter setups.
+
+## Task Templates
+
+Copy these templates to `.zed/tasks.json` in your project root.
+
+### For FVM Projects
+
+```json
+[
+  {
+    "label": "Flutter: Run",
+    "command": "fvm",
+    "args": ["flutter", "run"],
+    "tags": ["flutter-main"]
+  },
+  {
+    "label": "Flutter: Run on Device",
+    "command": "fvm",
+    "args": ["flutter", "run", "-d", "chrome"],
+    "tags": ["flutter-main"]
+  },
+  {
+    "label": "Flutter: Pub Get",
+    "command": "fvm",
+    "args": ["flutter", "pub", "get"]
+  },
+  {
+    "label": "Flutter: Pub Upgrade",
+    "command": "fvm",
+    "args": ["flutter", "pub", "upgrade"]
+  },
+  {
+    "label": "Flutter: Analyze",
+    "command": "fvm",
+    "args": ["flutter", "analyze"]
+  },
+  {
+    "label": "Flutter: Test",
+    "command": "fvm",
+    "args": ["flutter", "test"]
+  },
+  {
+    "label": "Flutter: Test File",
+    "command": "fvm",
+    "args": ["flutter", "test", "$ZED_FILE"],
+    "tags": ["flutter-test"]
+  },
+  {
+    "label": "Flutter: Clean",
+    "command": "fvm",
+    "args": ["flutter", "clean"]
+  },
+  {
+    "label": "Flutter: Doctor",
+    "command": "fvm",
+    "args": ["flutter", "doctor", "-v"]
+  },
+  {
+    "label": "Flutter: Devices",
+    "command": "fvm",
+    "args": ["flutter", "devices"]
+  },
+  {
+    "label": "Flutter: Build APK",
+    "command": "fvm",
+    "args": ["flutter", "build", "apk"]
+  },
+  {
+    "label": "Flutter: Build iOS",
+    "command": "fvm",
+    "args": ["flutter", "build", "ios"]
+  },
+  {
+    "label": "Flutter: Build Web",
+    "command": "fvm",
+    "args": ["flutter", "build", "web"]
+  },
+  {
+    "label": "Dart: Test File",
+    "command": "fvm",
+    "args": ["dart", "test", "$ZED_FILE"]
+  }
+]
+```
+
+### For System Flutter
+
+```json
+[
+  {
+    "label": "Flutter: Run",
+    "command": "flutter",
+    "args": ["run"],
+    "tags": ["flutter-main"]
+  },
+  {
+    "label": "Flutter: Run on Chrome",
+    "command": "flutter",
+    "args": ["run", "-d", "chrome"],
+    "tags": ["flutter-main"]
+  },
+  {
+    "label": "Flutter: Pub Get",
+    "command": "flutter",
+    "args": ["pub", "get"]
+  },
+  {
+    "label": "Flutter: Pub Upgrade",
+    "command": "flutter",
+    "args": ["pub", "upgrade"]
+  },
+  {
+    "label": "Flutter: Analyze",
+    "command": "flutter",
+    "args": ["analyze"]
+  },
+  {
+    "label": "Flutter: Test",
+    "command": "flutter",
+    "args": ["test"]
+  },
+  {
+    "label": "Flutter: Test File",
+    "command": "flutter",
+    "args": ["test", "$ZED_FILE"],
+    "tags": ["flutter-test"]
+  },
+  {
+    "label": "Flutter: Clean",
+    "command": "flutter",
+    "args": ["clean"]
+  },
+  {
+    "label": "Flutter: Doctor",
+    "command": "flutter",
+    "args": ["doctor", "-v"]
+  },
+  {
+    "label": "Flutter: Devices",
+    "command": "flutter",
+    "args": ["devices"]
+  },
+  {
+    "label": "Flutter: Build APK",
+    "command": "flutter",
+    "args": ["build", "apk"]
+  },
+  {
+    "label": "Flutter: Build iOS",
+    "command": "flutter",
+    "args": ["build", "ios"]
+  },
+  {
+    "label": "Flutter: Build Web",
+    "command": "flutter",
+    "args": ["build", "web"]
+  },
+  {
+    "label": "Dart: Test File",
+    "command": "dart",
+    "args": ["test", "$ZED_FILE"]
+  }
+]
+```
+
+### Usage Instructions
+
+1. Create `.zed/tasks.json` in your project root
+2. Copy the appropriate template (FVM or System Flutter)
+3. Customize as needed (add more tasks, change devices, etc.)
+4. Access tasks via the task picker (`Cmd+Shift+P` → type "flutter")
 
 ## Running Tasks
 

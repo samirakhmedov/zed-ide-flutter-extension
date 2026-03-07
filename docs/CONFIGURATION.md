@@ -377,6 +377,82 @@ Use environment-specific settings:
 }
 ```
 
+## Task Templates
+
+Copy these templates to `.zed/tasks.json` in your project root. For FVM projects, use the FVM templates.
+
+### FVM Task Templates
+
+```json
+[
+  { "label": "Flutter: Run", "command": "fvm", "args": ["flutter", "run"], "tags": ["flutter-main"] },
+  { "label": "Flutter: Pub Get", "command": "fvm", "args": ["flutter", "pub", "get"] },
+  { "label": "Flutter: Analyze", "command": "fvm", "args": ["flutter", "analyze"] },
+  { "label": "Flutter: Test", "command": "fvm", "args": ["flutter", "test"] },
+  { "label": "Flutter: Test File", "command": "fvm", "args": ["flutter", "test", "$ZED_FILE"], "tags": ["flutter-test"] },
+  { "label": "Flutter: Clean", "command": "fvm", "args": ["flutter", "clean"] },
+  { "label": "Dart: Test File", "command": "fvm", "args": ["dart", "test", "$ZED_FILE"] }
+]
+```
+
+### System Flutter Task Templates
+
+```json
+[
+  { "label": "Flutter: Run", "command": "flutter", "args": ["run"], "tags": ["flutter-main"] },
+  { "label": "Flutter: Pub Get", "command": "flutter", "args": ["pub", "get"] },
+  { "label": "Flutter: Analyze", "command": "flutter", "args": ["analyze"] },
+  { "label": "Flutter: Test", "command": "flutter", "args": ["test"] },
+  { "label": "Flutter: Test File", "command": "flutter", "args": ["test", "$ZED_FILE"], "tags": ["flutter-test"] },
+  { "label": "Flutter: Clean", "command": "flutter", "args": ["clean"] },
+  { "label": "Dart: Test File", "command": "dart", "args": ["test", "$ZED_FILE"] }
+]
+```
+
+## Debug Scenario Templates
+
+Copy these templates to `.zed/debug.json` in your project root.
+
+### FVM Debug Templates
+
+```json
+[
+  { "label": "Flutter: Debug (Chrome)", "adapter": "Flutter", "request": "launch", "program": "lib/main.dart", "device_id": "chrome", "useFvm": true },
+  { "label": "Flutter: Debug (iOS)", "adapter": "Flutter", "request": "launch", "program": "lib/main.dart", "useFvm": true },
+  { "label": "Flutter: Debug (Android)", "adapter": "Flutter", "request": "launch", "program": "lib/main.dart", "useFvm": true },
+  { "label": "Dart: Debug CLI", "adapter": "Dart", "request": "launch", "program": "bin/main.dart", "useFvm": true }
+]
+```
+
+### System Flutter Debug Templates
+
+```json
+[
+  { "label": "Flutter: Debug (Chrome)", "adapter": "Flutter", "request": "launch", "program": "lib/main.dart", "device_id": "chrome" },
+  { "label": "Flutter: Debug (iOS)", "adapter": "Flutter", "request": "launch", "program": "lib/main.dart" },
+  { "label": "Flutter: Debug (Android)", "adapter": "Flutter", "request": "launch", "program": "lib/main.dart" },
+  { "label": "Dart: Debug CLI", "adapter": "Dart", "request": "launch", "program": "bin/main.dart" }
+]
+```
+
+### Configuration Approaches for FVM
+
+**Option 1: Using `useFvm` flag (recommended for debug configs):**
+```json
+{ "type": "flutter", "program": "lib/main.dart", "useFvm": true }
+```
+
+**Option 2: Using explicit binary configuration (for LSP/settings):**
+```json
+{
+  "lsp": {
+    "dart": {
+      "binary": { "path": "fvm", "arguments": ["dart", "language-server"] }
+    }
+  }
+}
+```
+
 ## Troubleshooting
 
 ### Device Not Found

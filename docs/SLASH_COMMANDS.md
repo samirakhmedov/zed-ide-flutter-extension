@@ -2,6 +2,37 @@
 
 Slash commands provide quick access to Flutter tools through Zed's AI assistant panel.
 
+## FVM Detection
+
+Slash commands automatically detect whether FVM (Flutter Version Manager) is available in your project's PATH and adjust suggestions accordingly.
+
+### How It Works
+
+When you run a slash command:
+1. The extension checks if `fvm` is available in your worktree's PATH
+2. If FVM is found, commands suggest `fvm flutter ...` instead of `flutter ...`
+3. If FVM is not found, commands suggest standard `flutter ...` commands
+
+### Output Examples
+
+**With FVM detected:**
+```
+Run 'fvm flutter pub get' in your terminal.
+```
+
+**Without FVM:**
+```
+Run 'flutter pub get' in your terminal.
+```
+
+### When FVM Detection Applies
+
+- ✅ `/flutter-devices` - Detects FVM
+- ✅ `/flutter-doctor` - Detects FVM
+- ✅ `/flutter-pub` - Detects FVM
+- ✅ `/flutter-analyze` - Detects FVM
+- ✅ `/flutter-test` - Detects FVM
+
 ## Available Commands
 
 ### /flutter-devices
@@ -37,8 +68,12 @@ AI: Use "iphone-15-pro" as the device_id in your debug configuration.
 
 **Usage**: Type `/flutter-doctor` in the AI assistant panel
 
-**Output**:
+**Output Example** (varies by FVM detection):
 ```
+# With FVM in PATH:
+Run 'fvm flutter doctor -v' in your terminal for detailed diagnostics.
+
+# Without FVM:
 Run 'flutter doctor -v' in your terminal for detailed diagnostics.
 ```
 
@@ -290,6 +325,10 @@ AI: [Lists devices]
 1. **Command Execution**: Slash commands provide guidance, not direct execution
 2. **Output Processing**: Terminal output not automatically analyzed (copy-paste to AI)
 3. **Real-time Updates**: Device list not refreshed automatically
+
+### FVM Detection
+
+Slash commands automatically detect FVM and adjust command suggestions. See the [FVM Detection](#fvm-detection) section above for details.
 
 ### Workarounds
 
